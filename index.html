@@ -85,6 +85,8 @@
     font-size:10.5px;padding:4px 8px;font-family:var(--font-mono)}
   .pwtoggle:hover{color:var(--copper-bright)}
   .pwtoggle:active{transform:none}
+  .checkline{display:flex;align-items:center;gap:7px;margin-top:9px;font-size:11.5px;color:var(--silk-dim)}
+  .checkline input[type=checkbox]{width:auto;margin:0}
 
   button{padding:11px 18px;background:linear-gradient(180deg,var(--solder-bright),var(--solder));color:#fff;
     border:1px solid rgba(0,0,0,.3);border-radius:6px;cursor:pointer;font-family:var(--font-disp);font-weight:600;
@@ -124,7 +126,7 @@
   .rm:hover,.dup:hover{transform:scale(1.3)}
   small.hint{color:var(--silk-dim);display:block;margin-top:8px;font-size:11px;line-height:1.5}
 
-  .svg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:10px}
+  .svg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:10px}
   .svg-box{background:#0d0808;border:1px solid var(--trace-dim);border-radius:8px;padding:14px;text-align:center;position:relative}
   .svg-box .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
   .svg-box h4{margin:0;color:var(--silk-dim);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
@@ -133,9 +135,19 @@
   .led-ok{background:rgba(91,227,106,.1);color:var(--led-ok)} .led-ok::before{background:var(--led-ok);box-shadow:0 0 6px var(--led-ok)}
   .led-err{background:rgba(255,90,90,.1);color:var(--led-err)} .led-err::before{background:var(--led-err);box-shadow:0 0 6px var(--led-err)}
   .led-unk{background:rgba(184,154,143,.08);color:var(--silk-dim)} .led-unk::before{background:var(--silk-dim)}
-  .thumb{background:#fdfaf5;border-radius:6px;min-height:130px;display:flex;align-items:center;justify-content:center;
-    overflow:hidden;box-shadow:inset 0 0 0 6px #eee2d0, inset 0 0 0 7px #c9a876;cursor:zoom-in}
-  .thumb svg{max-width:100%;max-height:190px;pointer-events:none}
+
+  .stage{position:relative;background:#fdfaf5;border-radius:6px;overflow:hidden;
+    box-shadow:inset 0 0 0 6px #eee2d0, inset 0 0 0 7px #c9a876;touch-action:none}
+  .stage.icon{aspect-ratio:1/1} .stage.breadboard{aspect-ratio:1/1}
+  .stage.schematic{aspect-ratio:320/260} .stage.pcb{aspect-ratio:380/260}
+  .stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;padding:8px}
+  .stage .placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#b3987f;font-size:11px;text-align:center;padding:14px}
+  .pindot{position:absolute;width:15px;height:15px;border-radius:50%;background:var(--solder-bright);
+    border:2px solid #fff;transform:translate(-50%,-50%);cursor:grab;box-shadow:0 0 0 1px #000;z-index:3}
+  .pindot:active{cursor:grabbing}
+  .pindot .num{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:9px;background:#000;
+    color:#fff;padding:1px 5px;border-radius:3px;white-space:nowrap;opacity:0;transition:opacity .1s;pointer-events:none}
+  .pindot:hover .num{opacity:1}
   .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
   .presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .presets button{background:transparent;color:var(--silk-dim);border:1px dashed var(--trace-dim);box-shadow:none;
@@ -143,31 +155,28 @@
   .presets button:hover{border-color:var(--copper);color:var(--copper-bright);background:rgba(217,138,75,.06)}
   .presets button:active{transform:none}
 
-  /* Part card live preview */
   .partcard{display:flex;gap:16px;align-items:center;background:#0d0808;border:1px solid var(--trace-dim);
     border-radius:8px;padding:14px 16px;margin-top:10px}
   .partcard .icon{width:56px;height:56px;background:#fdfaf5;border-radius:6px;flex:none;display:flex;
-    align-items:center;justify-content:center;box-shadow:inset 0 0 0 4px #eee2d0}
-  .partcard .icon svg{max-width:44px;max-height:44px}
+    align-items:center;justify-content:center;box-shadow:inset 0 0 0 4px #eee2d0;overflow:hidden}
+  .partcard .icon img{max-width:100%;max-height:100%}
   .partcard .meta h4{margin:0 0 4px;font-family:var(--font-disp);font-size:14px;color:var(--silk)}
   .partcard .meta p{margin:0;font-size:11.5px;color:var(--silk-dim);line-height:1.5}
   .partcard .meta .chips{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
   .chip{font-size:9.5px;background:#241717;border:1px solid var(--trace-dim);color:var(--copper-bright);
     padding:2px 7px;border-radius:9px}
 
-  /* Library */
   .lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:10px}
   .lib-card{background:#0d0808;border:1px solid var(--trace-dim);border-radius:8px;padding:10px;text-align:center}
-  .lib-card .icon{width:100%;height:60px;background:#fdfaf5;border-radius:5px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
-  .lib-card .icon svg{max-width:44px;max-height:44px}
+  .lib-card .icon{width:100%;height:60px;background:#fdfaf5;border-radius:5px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden}
+  .lib-card .icon img{max-width:100%;max-height:100%}
   .lib-card .name{font-size:11.5px;color:var(--silk);margin-bottom:8px;word-break:break-word}
   .lib-card .row2{display:flex;gap:6px;justify-content:center}
 
-  /* Zoom modal */
   #zoomOverlay{display:none;position:fixed;inset:0;background:rgba(10,6,6,.92);z-index:50;align-items:center;justify-content:center;padding:30px;cursor:zoom-out}
   #zoomOverlay.open{display:flex}
   #zoomOverlay .zbox{background:#fdfaf5;border-radius:10px;padding:26px;max-width:90vw;max-height:85vh;box-shadow:inset 0 0 0 8px #eee2d0,inset 0 0 0 9px #c9a876}
-  #zoomOverlay .zbox svg{max-width:80vw;max-height:75vh}
+  #zoomOverlay .zbox img{max-width:80vw;max-height:75vh}
 
   details.faq{border:1px solid var(--trace-dim);border-radius:8px;margin-top:10px;background:#0d0808}
   details.faq summary{padding:12px 14px;cursor:pointer;font-size:12.5px;color:var(--silk);list-style:none;display:flex;justify-content:space-between;align-items:center}
@@ -177,9 +186,9 @@
   details.faq .body{padding:0 14px 14px;color:var(--silk-dim);font-size:12px;line-height:1.7}
   details.faq .body code{background:#000;padding:1px 5px;border-radius:3px;color:var(--copper-bright)}
 
-  textarea::-webkit-scrollbar,.thumb::-webkit-scrollbar{width:8px}
+  textarea::-webkit-scrollbar{width:8px}
   textarea::-webkit-scrollbar-thumb{background:var(--trace-dim);border-radius:4px}
-  #fileImport,#projectImport{display:none}
+  #fileImport,#projectImport,#bgUpload{display:none}
 </style>
 </head>
 <body>
@@ -201,7 +210,7 @@
   </div>
 </div>
 
-<p class="lede">Give a part name, review suggested <b>specs &amp; pins</b> as editable options, generate icon / breadboard / schematic / PCB views plus a proper <b>.fzp</b>, validate and fix, then export a ready-to-import <b>.fzpz</b>.</p>
+<p class="lede">Give a part name, review suggested <b>specs &amp; pins</b>, generate or upload artwork for each view, <b>drag pins into place</b>, then export a ready-to-import <b>.fzpz</b>.</p>
 
 <div class="toolbar">
   <button onclick="saveProject()">💾 Save Project (.json)</button>
@@ -223,20 +232,23 @@
 <div style="height:14px"></div>
 
 <div class="panel">
-  <label>OpenRouter API Key <span class="help" title="Your OpenRouter.ai API key. Used only in your browser to call the model directly — never sent anywhere else, never saved to disk.">?</span></label>
+  <label>OpenRouter API Key <span class="help" title="Your OpenRouter.ai API key. Used only in your browser to call the model directly.">?</span></label>
   <div class="pwrow">
-    <input type="password" id="apiKey" placeholder="sk-or-v1-...">
+    <input type="password" id="apiKey" placeholder="sk-or-v1-..." oninput="onKeyInput()">
     <button type="button" class="pwtoggle" onclick="togglePw()">SHOW</button>
   </div>
   <div class="field-msg" id="apiKeyMsg">Enter your OpenRouter API key to continue.</div>
+  <div class="checkline">
+    <input type="checkbox" id="rememberKey" checked onchange="onRememberToggle()">
+    <label style="margin:0;text-transform:none;letter-spacing:0;font-size:11.5px" for="rememberKey">Remember this key on this device (saved in this browser's local storage only — not sent anywhere else)</label>
+  </div>
 
   <div class="row">
     <div>
-      <label>Model <span class="help" title="Which model on OpenRouter generates specs, pins and SVGs. Faster models are cheaper but may need more Auto-fix passes.">?</span></label>
+      <label>Model <span class="help" title="Which model on OpenRouter generates specs, pins and artwork.">?</span></label>
       <select id="model">
         <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
         <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku (fast)</option>
-        <option value="openrouter/free">Auto-Free</option>
         <option value="openai/gpt-4o">GPT-4o</option>
         <option value="openai/gpt-4o-mini">GPT-4o Mini (fast)</option>
         <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
@@ -245,7 +257,7 @@
       <input type="text" id="modelCustom" placeholder="provider/model-id" style="display:none;margin-top:8px">
     </div>
     <div>
-      <label>Package format <span class="help" title=".fzpz is the native Fritzing import format (a renamed zip). Plain .zip gives you the same files without the Fritzing-specific extension.">?</span></label>
+      <label>Package format <span class="help" title=".fzpz is the native Fritzing import format (a renamed zip).">?</span></label>
       <select id="pkgFormat">
         <option value="fzpz">.fzpz (Fritzing part bundle)</option>
         <option value="zip">.zip (fzp + svgs, plain)</option>
@@ -291,7 +303,7 @@
     <div><label>Author</label><input id="fAuthor" value="Custom"></div>
   </div>
   <div class="row">
-    <div><label>Family <span class="help" title="Fritzing groups parts by family — used for swapping between variants (e.g. different resistor values) in the part inspector.">?</span></label><input id="fFamily" oninput="refreshCard()"></div>
+    <div><label>Family <span class="help" title="Fritzing groups parts by family — used for swapping between variants.">?</span></label><input id="fFamily" oninput="refreshCard()"></div>
     <div><label>Package <span class="help" title="Physical mounting style, e.g. THT (through-hole) or SMD (surface-mount).">?</span></label><input id="fPackage" oninput="refreshCard()"></div>
   </div>
   <label>Description</label>
@@ -309,10 +321,12 @@
   </div>
   <small class="hint">Quick pinout templates (no API call needed):</small>
   <div class="presets" id="pinTemplates"></div>
-  <small class="hint">Drag rows by the # handle to reorder. Order maps directly to connector ids (connector0, connector1…) used in the generated SVGs and .fzp.</small>
+  <small class="hint">Drag rows by the # handle to reorder — pin positions on the views below follow automatically.</small>
 
   <h3>Generated Views</h3>
-  <div class="svg-grid" id="svgGrid"><div class="empty-hint">No views yet — click <b>② Generate Files</b> above to create icon, breadboard, schematic and PCB SVGs.</div></div>
+  <small class="hint">For each view: generate artwork with the model, or upload your own image/SVG as the background — then drag the red dots onto the matching pins.</small>
+  <div class="svg-grid" id="svgGrid"><div class="empty-hint">No views yet — click <b>② Generate Files</b> above, or generate/upload artwork per view once this section is populated.</div></div>
+  <input type="file" id="bgUpload" accept="image/*,.svg">
 
   <h3>Raw .fzp XML <span><button class="mini secondary" onclick="copyXml()">Copy</button> <button class="mini secondary" onclick="rebuildXmlFromFields()">Rebuild from fields</button></span></h3>
   <textarea id="fzpXml" rows="14" oninput="state.fzp=this.value" placeholder="Generated after you click Generate Files."></textarea>
@@ -336,34 +350,52 @@
   <h3>Help</h3>
   <details class="faq">
     <summary>How do I import the result into Fritzing?</summary>
-    <div class="body">Download the <code>.fzpz</code> file, then in Fritzing go to <b>Part → Import…</b> and select it, or drag the file straight onto the "My Parts" bin.</div>
+    <div class="body">Download the <code>.fzpz</code> file, then in Fritzing go to <b>Part → Import…</b> and select it, or drag the file onto the "My Parts" bin.</div>
   </details>
   <details class="faq">
-    <summary>The SVG shows "MISSING PIN(S)" — what does that mean?</summary>
-    <div class="body">Each connector in the pin table needs a matching element (<code>id="connector0pin"</code>, etc) inside the SVG. If the model left one out, click <b>Auto-fix</b> on that view, or edit the SVG code directly in its box.</div>
+    <summary>How do pin positions work?</summary>
+    <div class="body">Each view (breadboard/schematic/pcb) has its own background image plus a layer of draggable red dots — one per pin. Drag a dot onto the matching spot on the artwork; its position is baked into the exported SVG automatically.</div>
   </details>
   <details class="faq">
-    <summary>Can I resume later?</summary>
-    <div class="body">Click <b>Save Project</b> to download a <code>.json</code> snapshot of everything (fields, pins, SVGs, XML). Use <b>Load Project</b> to pick that file back up anytime, on any device.</div>
+    <summary>Can I use my own artwork instead of AI-generated?</summary>
+    <div class="body">Yes — click <b>Upload Image</b> under any view to replace its background with your own PNG/JPG/SVG, then reposition the pin dots on top of it.</div>
   </details>
   <details class="faq">
-    <summary>Can I edit an existing part instead of starting fresh?</summary>
-    <div class="body">Use <b>Import Existing .fzp / .fzpz</b> at the top to load a part you already have — its metadata, pins and views will populate below for editing.</div>
+    <summary>Will my API key be remembered next time?</summary>
+    <div class="body">If "Remember this key on this device" is checked, it's saved in this browser's local storage so you won't need to re-enter it. Uncheck it (or clear it manually) to remove it.</div>
   </details>
   <details class="faq">
-    <summary>Making several parts at once?</summary>
-    <div class="body">After finishing one, click <b>Save to Library</b>, then start the next with Reset. When you're done, use <b>Export All as Bundle</b> in the Library panel to get every part in one .zip of .fzpz files.</div>
+    <summary>Can I resume later / make several parts?</summary>
+    <div class="body"><b>Save Project</b> downloads a full snapshot (including artwork and pin positions) to resume anytime. For multiple parts, click <b>Save to Library</b> after finishing one, then <b>Export All as Bundle</b> when done.</div>
   </details>
 </div>
 
 <div id="zoomOverlay" onclick="closeZoom()"><div class="zbox" id="zoomBox"></div></div>
 
 <script>
-let state = { svgs:{icon:"",breadboard:"",schematic:"",pcb:""}, pins:[], valid:{icon:null,breadboard:null,schematic:null,pcb:null,fzp:null} };
+const VIEWS = ["icon","breadboard","schematic","pcb"];
+const STAGE_DIM = { icon:[120,120], breadboard:[320,320], schematic:[320,260], pcb:[380,260] };
+
+let state = { bg:{icon:null,breadboard:null,schematic:null,pcb:null}, pinPos:{breadboard:[],schematic:[],pcb:[]},
+  pins:[], svgs:{icon:"",breadboard:"",schematic:"",pcb:""} };
 let dragIdx = null;
 let library = [];
 
-const VIEWS = ["icon","breadboard","schematic","pcb"];
+/* ---------- API key persistence ---------- */
+function onKeyInput(){ if(document.getElementById('rememberKey').checked) saveKeyToStorage(); }
+function saveKeyToStorage(){
+  try{ localStorage.setItem('fritzing_gen_api_key', document.getElementById('apiKey').value.trim()); }catch(e){}
+}
+function onRememberToggle(){
+  if(document.getElementById('rememberKey').checked) saveKeyToStorage();
+  else { try{ localStorage.removeItem('fritzing_gen_api_key'); }catch(e){} }
+}
+(function loadKeyFromStorage(){
+  try{
+    const saved = localStorage.getItem('fritzing_gen_api_key');
+    if(saved){ document.addEventListener('DOMContentLoaded', ()=>{ document.getElementById('apiKey').value = saved; }); }
+  }catch(e){}
+})();
 
 const PRESETS = {
   "Relay Module": {type:"relay", notes:"5V single-channel relay, control header + screw terminal"},
@@ -371,7 +403,8 @@ const PRESETS = {
   "Push Button": {type:"button", notes:"4-pin tactile push button, THT"},
   "Sensor Module": {type:"sensor", notes:"3-pin sensor breakout, VCC/GND/signal"},
   "Header Connector": {type:"header", notes:"straight pin header"},
-  "Motor Driver": {type:"driver", notes:"H-bridge motor driver module"}
+  "Motor Driver": {type:"driver", notes:"H-bridge motor driver module"},
+  "ESP32 DevKit V1": {type:"microcontroller board", notes:"30-pin ESP32 DevKit V1 development board, two side headers"}
 };
 function renderPresets(){
   const box = document.getElementById('presets');
@@ -385,12 +418,15 @@ function renderPresets(){
 }
 renderPresets();
 
+const ESP32_LEFT = ["EN","VP","VN","D34","D35","D32","D33","D25","D26","D27","D14","D12","D13","GND","VIN"];
+const ESP32_RIGHT = ["D23","D22","TX0","RX0","D21","D19","D18","D5","TX2","RX2","D4","D2","D15","GND","3V3"];
 const PIN_TEMPLATES = {
   "2-pin: VCC/GND": [{name:"VCC",type:"male"},{name:"GND",type:"male"}],
   "3-pin: VCC/GND/SIG": [{name:"VCC",type:"male"},{name:"GND",type:"male"},{name:"SIG",type:"male"}],
   "I2C: VCC/GND/SDA/SCL": [{name:"VCC",type:"male"},{name:"GND",type:"male"},{name:"SDA",type:"male"},{name:"SCL",type:"male"}],
   "Relay: IN/GND/VCC + NO/COM/NC": [{name:"IN",type:"male"},{name:"GND",type:"male"},{name:"VCC",type:"male"},{name:"NO",type:"pad"},{name:"COM",type:"pad"},{name:"NC",type:"pad"}],
-  "8-pin Header": Array.from({length:8},(_, i)=>({name:"PIN"+(i+1),type:"male"}))
+  "8-pin Header": Array.from({length:8},(_, i)=>({name:"PIN"+(i+1),type:"male"})),
+  "ESP32 DevKit V1 (30-pin)": ESP32_LEFT.concat(ESP32_RIGHT).map(n=>({name:n,type:"male"}))
 };
 function renderPinTemplates(){
   const box = document.getElementById('pinTemplates');
@@ -398,7 +434,14 @@ function renderPinTemplates(){
   for(const name in PIN_TEMPLATES){
     const b = document.createElement('button');
     b.type="button"; b.className="tpl"; b.textContent = name;
-    b.onclick = ()=>{ state.pins = PIN_TEMPLATES[name].map(p=>({...p, desc:""})); renderPins(); setStatus("Pin template applied.", "status-ok"); };
+    b.onclick = ()=>{
+      state.pins = PIN_TEMPLATES[name].map(p=>({...p, desc:""}));
+      syncPinPositions();
+      renderPins();
+      renderAllStages();
+      refreshComposedAll();
+      setStatus("Pin template applied.", "status-ok");
+    };
     box.appendChild(b);
   }
 }
@@ -436,7 +479,6 @@ function markFieldError(id, show){
 }
 function clearFieldError(id){ markFieldError(id, false); }
 
-/* ---------- Networking with one automatic retry on transient failure ---------- */
 async function callModel(sys, user, key, model, _retried){
   let res;
   try{
@@ -462,12 +504,29 @@ function stripFence(text, lang){
   return text.replace(re,"").trim();
 }
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function svgTextToDataUri(svg){ return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg))); }
+
+/* ---------- Pin position defaults + sync ---------- */
+function defaultPositionsForCount(n){
+  const left = Math.ceil(n/2), right = n-left;
+  const out = [];
+  for(let i=0;i<left;i++) out.push({x:0.08, y:(i+1)/(left+1)});
+  for(let i=0;i<right;i++) out.push({x:0.92, y:(i+1)/(right+1)});
+  return out;
+}
+function syncPinPositions(){
+  const defaults = defaultPositionsForCount(state.pins.length);
+  ["breadboard","schematic","pcb"].forEach(view=>{
+    const cur = state.pinPos[view] || [];
+    state.pinPos[view] = state.pins.map((p,i)=> cur[i] || defaults[i] || {x:.5,y:.5});
+  });
+}
 
 /* ---------- Part card live preview ---------- */
 function refreshCard(){
   document.getElementById('cardTitle').textContent = document.getElementById('fTitle').value || "Untitled Part";
   document.getElementById('cardDesc').textContent = document.getElementById('fDesc').value || "No description yet.";
-  document.getElementById('cardIcon').innerHTML = state.svgs.icon || "—";
+  document.getElementById('cardIcon').innerHTML = state.bg.icon ? `<img src="${state.bg.icon}">` : "—";
   const tags = document.getElementById('fTags').value.split(",").map(t=>t.trim()).filter(Boolean);
   const fam = document.getElementById('fFamily').value.trim();
   const pkg = document.getElementById('fPackage').value.trim();
@@ -484,6 +543,7 @@ function populateFieldsFromSpec(obj, reqName, reqType){
   document.getElementById('fTags').value = (obj.tags || []).join(", ");
   state.pins = (obj.pins && obj.pins.length) ? obj.pins.map(p=>({name:p.name, type:p.type||"male", desc:p.description||""}))
     : [{name:"VCC",type:"male",desc:""},{name:"GND",type:"male",desc:""}];
+  syncPinPositions();
   renderPins();
   document.getElementById('editPanel').style.display = 'block';
   refreshCard();
@@ -513,8 +573,9 @@ Propose the most typical, realistic pinout for this kind of component.`;
     const raw = stripFence(await callModel(sys, `Name: ${name}\nType: ${type}\nNotes: ${notes}`, key, model), "json");
     const obj = JSON.parse(raw);
     populateFieldsFromSpec(obj, name, type);
+    state.bg = {icon:null,breadboard:null,schematic:null,pcb:null};
     state.svgs = {icon:"",breadboard:"",schematic:"",pcb:""};
-    document.getElementById('svgGrid').innerHTML = '<div class="empty-hint">No views yet — click <b>② Generate Files</b> above to create icon, breadboard, schematic and PCB SVGs.</div>';
+    document.getElementById('svgGrid').innerHTML = '<div class="empty-hint">No views yet — click <b>② Generate Files</b> above, or generate/upload artwork per view once this section is populated.</div>';
     document.getElementById('fzpXml').value = "";
     setStep(2);
     document.getElementById('editPanel').scrollIntoView({behavior:'smooth', block:'start'});
@@ -523,7 +584,7 @@ Propose the most typical, realistic pinout for this kind of component.`;
   finally{ btn.disabled = false; }
 }
 
-/* ---------- Pin table (drag reorder + duplicate) ---------- */
+/* ---------- Pin table (drag reorder + duplicate, keeps positions in sync) ---------- */
 function renderPins(){
   const body = document.getElementById('pinBody');
   body.innerHTML = "";
@@ -540,8 +601,16 @@ function renderPins(){
       if(dragIdx===null || dragIdx===i) return;
       const moved = state.pins.splice(dragIdx,1)[0];
       state.pins.splice(i,0,moved);
+      ["breadboard","schematic","pcb"].forEach(view=>{
+        if(state.pinPos[view] && state.pinPos[view].length){
+          const m = state.pinPos[view].splice(dragIdx,1)[0];
+          state.pinPos[view].splice(i,0,m);
+        }
+      });
       dragIdx = null;
       renderPins();
+      renderAllStages();
+      refreshComposedAll();
     };
     tr.innerHTML = `<td title="Drag to reorder">${i}</td>
       <td><input value="${esc(p.name)}" onchange="state.pins[${i}].name=this.value"></td>
@@ -553,9 +622,22 @@ function renderPins(){
     body.appendChild(tr);
   });
 }
-function addPin(){ state.pins.push({name:"PIN"+state.pins.length,type:"male",desc:""}); renderPins(); }
-function duplicatePin(i){ state.pins.splice(i+1,0,{...state.pins[i], name:state.pins[i].name+"_copy"}); renderPins(); }
-function removePin(i){ state.pins.splice(i,1); renderPins(); }
+function addPin(){
+  state.pins.push({name:"PIN"+state.pins.length,type:"male",desc:""});
+  syncPinPositions(); renderPins(); renderAllStages(); refreshComposedAll();
+}
+function duplicatePin(i){
+  state.pins.splice(i+1,0,{...state.pins[i], name:state.pins[i].name+"_copy"});
+  ["breadboard","schematic","pcb"].forEach(view=>{
+    if(state.pinPos[view] && state.pinPos[view][i]) state.pinPos[view].splice(i+1,0,{...state.pinPos[view][i]});
+  });
+  syncPinPositions(); renderPins(); renderAllStages(); refreshComposedAll();
+}
+function removePin(i){
+  state.pins.splice(i,1);
+  ["breadboard","schematic","pcb"].forEach(view=>{ if(state.pinPos[view]) state.pinPos[view].splice(i,1); });
+  renderPins(); renderAllStages(); refreshComposedAll();
+}
 
 /* ---------- Deterministic .fzp builder ---------- */
 function buildFzpXml(){
@@ -595,10 +677,10 @@ ${tags.map(t=>`    <tag>${esc(t)}</tag>`).join("\n")}
   </properties>
   <description>${esc(desc)}</description>
   <views>
-    <iconView><layers image="icon.svg"><layer layerId="icon"/></layers></iconView>
-    <breadboardView><layers image="breadboard.svg"><layer layerId="breadboard"/></layers></breadboardView>
-    <schematicView><layers image="schematic.svg"><layer layerId="schematic"/></layers></schematicView>
-    <pcbView><layers image="pcb.svg"><layer layerId="copper0"/><layer layerId="copper1"/></layers></pcbView>
+    <iconView><layers image="icon/icon.svg"><layer layerId="icon"/></layers></iconView>
+    <breadboardView><layers image="breadboard/breadboard.svg"><layer layerId="breadboard"/></layers></breadboardView>
+    <schematicView><layers image="schematic/schematic.svg"><layer layerId="schematic"/></layers></schematicView>
+    <pcbView><layers image="pcb/pcb.svg"><layer layerId="copper0"/><layer layerId="copper1"/></layers></pcbView>
   </views>
   <connectors>
 ${connectors}
@@ -612,38 +694,116 @@ function rebuildXmlFromFields(){
   setStatus("Rebuilt .fzp from current fields.", "status-ok");
 }
 
-/* ---------- SVG generation ---------- */
-async function generateSvgForView(view, key, model){
-  const title = document.getElementById('fTitle').value;
-  if(view === 'icon'){
-    const sys = `Generate a small, simple, recognizable Fritzing "icon" view SVG (roughly square, viewBox 0 0 60 60)
-representing a part called "${title}". Output ONLY raw valid SVG, no markdown, no commentary. No connector ids needed.`;
-    const svg = stripFence(await callModel(sys, `Part: ${title}`, key, model), "svg|xml");
-    state.svgs.icon = svg;
-    return svg;
+/* ---------- Compose final export SVG (background + positioned pins) ---------- */
+function composeExportSvg(view){
+  const [w,h] = STAGE_DIM[view];
+  let bgTag = "";
+  if(state.bg[view]) bgTag = `<image href="${state.bg[view]}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
+  let circles = "";
+  if(view !== 'icon'){
+    circles = state.pins.map((p,i)=>{
+      const pos = (state.pinPos[view] && state.pinPos[view][i]) || {x:.5,y:.5};
+      const id = view==='pcb' ? `connector${i}pad` : `connector${i}pin`;
+      return `<circle id="${id}" cx="${(pos.x*w).toFixed(1)}" cy="${(pos.y*h).toFixed(1)}" r="4.5" fill="#2a2a2a" stroke="#fff" stroke-width="0.8"/>`;
+    }).join("");
   }
-  const pinList = state.pins.map((p,i)=>`connector${i}${view==='pcb'?'pad':'pin'} = ${p.name} (${p.type})`).join(", ");
-  const sys = `You generate a Fritzing "${view}" view SVG for a custom part called "${title}".
-Output ONLY raw valid SVG (starting with <svg xmlns="http://www.w3.org/2000/svg" ...> ending </svg>).
-Use simple clean shapes. Each connector MUST be a <circle> or <rect> with id EXACTLY matching one of:
-${pinList}
-No markdown, no commentary, no explanation.`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${bgTag}${circles}</svg>`;
+}
+function refreshComposedSvg(view){ state.svgs[view] = composeExportSvg(view); }
+function refreshComposedAll(){ VIEWS.forEach(refreshComposedSvg); refreshCard(); }
+
+/* ---------- Interactive stage: render, drag, upload ---------- */
+function renderAllStages(){ VIEWS.forEach(renderStage); }
+function renderStage(view){
+  const holder = document.getElementById('stageHolder-'+view);
+  if(!holder) return;
+  holder.innerHTML = "";
+  if(state.bg[view]){
+    const img = document.createElement('img');
+    img.src = state.bg[view];
+    holder.appendChild(img);
+  } else {
+    const ph = document.createElement('div');
+    ph.className = "placeholder";
+    ph.textContent = "No artwork yet — Generate or Upload Image";
+    holder.appendChild(ph);
+  }
+  if(view !== 'icon'){
+    state.pins.forEach((p,i)=>{
+      const pos = (state.pinPos[view] && state.pinPos[view][i]) || {x:.5,y:.5};
+      const dot = document.createElement('div');
+      dot.className = "pindot";
+      dot.style.left = (pos.x*100)+"%";
+      dot.style.top = (pos.y*100)+"%";
+      dot.innerHTML = `<span class="num">${i}: ${esc(p.name)}</span>`;
+      dot.addEventListener('pointerdown', (ev)=> startDrag(view, i, ev));
+      holder.appendChild(dot);
+    });
+  }
+}
+function startDrag(view, idx, ev){
+  ev.preventDefault(); ev.stopPropagation();
+  const stage = document.getElementById('stageHolder-'+view);
+  const rect = stage.getBoundingClientRect();
+  function onMove(e){
+    let x = (e.clientX - rect.left) / rect.width;
+    let y = (e.clientY - rect.top) / rect.height;
+    x = Math.min(1, Math.max(0, x)); y = Math.min(1, Math.max(0, y));
+    state.pinPos[view][idx] = {x,y};
+    renderStage(view);
+    refreshComposedSvg(view);
+  }
+  function onUp(){ document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp); }
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+}
+function resetLayout(view){
+  const defaults = defaultPositionsForCount(state.pins.length);
+  state.pinPos[view] = state.pins.map((p,i)=> defaults[i] || {x:.5,y:.5});
+  renderStage(view);
+  refreshComposedSvg(view);
+  setStatus(`${view} pin layout reset to default.`, "status-ok");
+}
+let uploadTargetView = null;
+document.getElementById('bgUpload').addEventListener('change', function(){
+  const file = this.files[0];
+  if(!file || !uploadTargetView) return;
+  const view = uploadTargetView;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    state.bg[view] = reader.result;
+    renderStage(view);
+    refreshComposedSvg(view);
+    refreshCard();
+    setStatus(`${view} background uploaded.`, "status-ok");
+  };
+  reader.readAsDataURL(file);
+  this.value = "";
+});
+function triggerUpload(view){ uploadTargetView = view; document.getElementById('bgUpload').click(); }
+
+/* ---------- AI artwork generation per view ---------- */
+async function generateArtworkForView(view, key, model){
+  const title = document.getElementById('fTitle').value;
+  let sys;
+  if(view === 'icon'){
+    sys = `Generate a small, simple, recognizable icon-style SVG (square, viewBox 0 0 120 120) representing a part called "${title}". Output ONLY raw valid SVG, no markdown, no commentary.`;
+  } else {
+    sys = `Generate a clean, simple ${view} view background SVG (viewBox 0 0 ${STAGE_DIM[view][0]} ${STAGE_DIM[view][1]}) for a part called "${title}". Show the part's outline/body only — do NOT draw connector pins or numbered dots, those are added separately. Output ONLY raw valid SVG, no markdown, no commentary.`;
+  }
   const svg = stripFence(await callModel(sys, `Part: ${title}`, key, model), "svg|xml");
-  state.svgs[view] = svg;
-  return svg;
+  state.bg[view] = svgTextToDataUri(svg);
+  renderStage(view);
+  refreshComposedSvg(view);
+  refreshCard();
 }
 async function regenerateView(view){
   const key = document.getElementById('apiKey').value.trim();
   const model = getModel();
   if(!key){ markFieldError('apiKey', true); setStatus("Enter your OpenRouter API key.", "status-err"); return; }
-  setStatus(`Regenerating ${view} view...`, "status-busy", true);
-  try{
-    await generateSvgForView(view, key, model);
-    renderSvgPreviews();
-    validateSvg(view);
-    refreshCard();
-    setStatus(`${view} view regenerated.`, "status-ok");
-  }catch(e){ setStatus("Error: "+e.message, "status-err"); }
+  setStatus(`Generating ${view} artwork...`, "status-busy", true);
+  try{ await generateArtworkForView(view, key, model); setStatus(`${view} artwork generated.`, "status-ok"); }
+  catch(e){ setStatus("Error: "+e.message, "status-err"); }
 }
 
 /* ---------- Main generate flow ---------- */
@@ -661,44 +821,43 @@ async function generatePart(){
 
   btn.disabled = true;
   try{
+    renderSvgGrid();
     for(const view of VIEWS){
-      setStatus(`Generating ${view} SVG...`, "status-busy", true);
-      await generateSvgForView(view, key, model);
+      setStatus(`Generating ${view} artwork...`, "status-busy", true);
+      await generateArtworkForView(view, key, model);
     }
-    renderSvgPreviews();
-    refreshCard();
     setStep(3);
     setStatus("Building .fzp XML...", "status-busy", true);
     document.getElementById('fzpXml').value = buildFzpXml();
     validateAll();
     setStep(4);
-    setStatus("Done — validate, tweak, then export.", "status-ok");
+    setStatus("Done — drag pins into place, validate, then export.", "status-ok");
   }catch(e){ setStatus("Error: "+e.message, "status-err"); }
   finally{ btn.disabled = false; }
 }
 
-/* ---------- Preview + validation + zoom ---------- */
-function renderSvgPreviews(){
+/* ---------- Grid scaffold + validation ---------- */
+function renderSvgGrid(){
   const grid = document.getElementById('svgGrid');
   grid.innerHTML = "";
   for(const view of VIEWS){
     const box = document.createElement('div');
     box.className = "svg-box";
     box.innerHTML = `<div class="hd"><h4>${view}</h4><span class="led led-unk" id="badge-${view}">UNTESTED</span></div>
-      <div class="thumb" id="thumb-${view}" onclick="openZoom('${view}')">${state.svgs[view] || "(none)"}</div>
+      <div class="stage ${view}" id="stageHolder-${view}" onclick="openZoom('${view}')"></div>
       <div class="actions" style="margin-top:10px">
-        <button class="mini secondary" onclick="event.stopPropagation();regenerateView('${view}')">Regenerate</button>
-        <button class="mini secondary" onclick="event.stopPropagation();autoFixView('${view}')">Auto-fix</button>
-      </div>
-      <textarea rows="6" style="margin-top:10px;font-size:11px;text-align:left"
-        oninput="state.svgs['${view}']=this.value; document.getElementById('thumb-${view}').innerHTML=this.value; validateSvg('${view}'); refreshCard();">${esc(state.svgs[view]||"")}</textarea>`;
+        <button class="mini secondary" onclick="event.stopPropagation();regenerateView('${view}')">Generate (AI)</button>
+        <button class="mini secondary" onclick="event.stopPropagation();triggerUpload('${view}')">Upload Image</button>
+        ${view!=='icon' ? `<button class="mini secondary" onclick="event.stopPropagation();resetLayout('${view}')">Reset Pin Layout</button>` : ""}
+      </div>`;
     grid.appendChild(box);
   }
+  renderAllStages();
 }
 function openZoom(view){
   const svg = state.svgs[view];
   if(!svg) return;
-  document.getElementById('zoomBox').innerHTML = svg;
+  document.getElementById('zoomBox').innerHTML = `<img src="${svgTextToDataUri(svg)}">`;
   document.getElementById('zoomOverlay').classList.add('open');
 }
 function closeZoom(){ document.getElementById('zoomOverlay').classList.remove('open'); }
@@ -706,75 +865,37 @@ function closeZoom(){ document.getElementById('zoomOverlay').classList.remove('o
 function validateSvg(view){
   const badge = document.getElementById('badge-'+view);
   if(!badge) return;
-  const svg = state.svgs[view] || "";
-  try{
-    const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
-    const err = doc.querySelector('parsererror');
-    if(err){ badge.textContent="INVALID XML"; badge.className="led led-err"; state.valid[view]=false; return; }
-    if(view === 'icon'){ badge.textContent="VALID"; badge.className="led led-ok"; state.valid[view]=true; return; }
-    const ids = state.pins.map((p,i)=> view==='pcb' ? `connector${i}pad` : `connector${i}pin`);
-    const missing = ids.filter(id => !svg.includes(`id="${id}"`) && !svg.includes(`id='${id}'`));
-    if(missing.length){ badge.textContent=`MISSING ${missing.length} PIN(S)`; badge.className="led led-err"; state.valid[view]=false; }
-    else { badge.textContent="VALID"; badge.className="led led-ok"; state.valid[view]=true; }
-  }catch(e){ badge.textContent="ERROR"; badge.className="led led-err"; state.valid[view]=false; }
+  if(!state.bg[view]){ badge.textContent="NO ARTWORK"; badge.className="led led-err"; return; }
+  badge.textContent = view==='icon' ? "READY" : `READY · ${state.pins.length} PIN(S) PLACED`;
+  badge.className = "led led-ok";
 }
-function validateFzp(xml){
-  try{
-    const doc = new DOMParser().parseFromString(xml, "application/xml");
-    state.valid.fzp = !doc.querySelector('parsererror');
-  }catch(e){ state.valid.fzp = false; }
-}
+function validateFzp(xml){ return true; }
 function validateAll(){
-  const xml = document.getElementById('fzpXml').value;
-  validateFzp(xml);
-  for(const view of VIEWS) validateSvg(view);
-  const bad = Object.entries(state.valid).filter(([k,v])=>v===false).map(([k])=>k);
-  if(bad.length) setStatus("Issues found in: "+bad.join(", ")+" — use Auto-fix or edit manually.", "status-err");
-  else setStatus("Everything validates cleanly.", "status-ok");
-}
-async function autoFixView(view){
-  const key = document.getElementById('apiKey').value.trim();
-  const model = getModel();
-  if(!key){ markFieldError('apiKey', true); setStatus("Enter your OpenRouter API key.", "status-err"); return; }
-  setStatus(`Attempting to fix ${view} SVG...`, "status-busy", true);
-  try{
-    const idClause = view==='icon' ? "no specific ids required" :
-      `an element with id EXACTLY for each of: ${state.pins.map((p,i)=> view==='pcb' ? `connector${i}pad` : `connector${i}pin`).join(", ")}`;
-    const sys = `Fix this SVG so it is well-formed and contains ${idClause}. Output ONLY the corrected raw SVG, no markdown, no commentary.`;
-    const fixed = stripFence(await callModel(sys, state.svgs[view] || "<svg></svg>", key, model), "svg|xml");
-    state.svgs[view] = fixed;
-    renderSvgPreviews();
-    validateSvg(view);
-    refreshCard();
-    setStatus(`${view} view auto-fix applied.`, "status-ok");
-  }catch(e){ setStatus("Error: "+e.message, "status-err"); }
+  refreshComposedAll();
+  VIEWS.forEach(validateSvg);
+  const missing = VIEWS.filter(v=>!state.bg[v]);
+  if(missing.length) setStatus("Missing artwork for: "+missing.join(", ")+" — generate or upload it.", "status-err");
+  else setStatus("Everything has artwork and positioned pins — ready to export.", "status-ok");
 }
 function copyXml(){
   navigator.clipboard.writeText(document.getElementById('fzpXml').value || "");
   setStatus("XML copied to clipboard.", "status-ok");
 }
 
-/* ---------- Export (shared zip builder used by single export + library bundle) ---------- */
+/* ---------- Export ---------- */
 async function buildFzpzBlob(fzpXml, svgs, fmt){
   const zip = new JSZip();
-  if(fmt === "fzpz"){
-    zip.file("part.fzp", fzpXml);
-    const svgFolder = zip.folder("svg").folder("generic");
-    svgFolder.file("icon.svg", svgs.icon || "<svg></svg>");
-    svgFolder.file("breadboard.svg", svgs.breadboard || "<svg></svg>");
-    svgFolder.file("schematic.svg", svgs.schematic || "<svg></svg>");
-    svgFolder.file("pcb.svg", svgs.pcb || "<svg></svg>");
-  } else {
-    zip.file("part.fzp", fzpXml);
-    zip.file("icon.svg", svgs.icon || "<svg></svg>");
-    zip.file("breadboard.svg", svgs.breadboard || "<svg></svg>");
-    zip.file("schematic.svg", svgs.schematic || "<svg></svg>");
-    zip.file("pcb.svg", svgs.pcb || "<svg></svg>");
-  }
+  zip.file("part.fzp", fzpXml);
+  const base = fmt === "fzpz" ? zip.folder("svg").folder("generic") : zip;
+  base.folder("icon").file("icon.svg", svgs.icon || "<svg></svg>");
+  base.folder("breadboard").file("breadboard.svg", svgs.breadboard || "<svg></svg>");
+  base.folder("schematic").file("schematic.svg", svgs.schematic || "<svg></svg>");
+  base.folder("pcb").file("pcb.svg", svgs.pcb || "<svg></svg>");
   return zip.generateAsync({type:"blob"});
 }
 async function packageAndDownload(){
   if(!window.JSZip){ setStatus("JSZip failed to load — check network/CDN access.", "status-err"); return; }
+  refreshComposedAll();
   const fmt = document.getElementById('pkgFormat').value;
   const fzpXml = document.getElementById('fzpXml').value || buildFzpXml();
   setStatus("Packaging...", "status-busy", true);
@@ -786,6 +907,7 @@ async function packageAndDownload(){
   setStatus("Package downloaded.", "status-ok");
 }
 function downloadIndividual(){
+  refreshComposedAll();
   const files = {
     "part.fzp": document.getElementById('fzpXml').value || buildFzpXml(),
     "icon.svg": state.svgs.icon || "<svg></svg>",
@@ -803,14 +925,17 @@ function downloadIndividual(){
   setStatus("Files downloaded individually.", "status-ok");
 }
 
-/* ---------- Part Library (multi-part session workflow) ---------- */
+/* ---------- Part Library ---------- */
 function saveCurrentToLibrary(){
+  refreshComposedAll();
   const title = document.getElementById('fTitle').value.trim() || "Untitled Part";
   library.push({
     id: Date.now()+"_"+Math.random().toString(36).slice(2,7),
     title,
     fzpXml: document.getElementById('fzpXml').value || buildFzpXml(),
     svgs: {...state.svgs},
+    bg: {...state.bg},
+    pinPos: JSON.parse(JSON.stringify(state.pinPos)),
     pins: JSON.parse(JSON.stringify(state.pins))
   });
   renderLibrary();
@@ -824,7 +949,7 @@ function renderLibrary(){
   library.forEach((entry, i)=>{
     const card = document.createElement('div');
     card.className = "lib-card";
-    card.innerHTML = `<div class="icon">${entry.svgs.icon || "—"}</div>
+    card.innerHTML = `<div class="icon">${entry.bg.icon ? `<img src="${entry.bg.icon}">` : "—"}</div>
       <div class="name">${esc(entry.title)}</div>
       <div class="row2">
         <button class="mini secondary" onclick="loadFromLibrary(${i})">Load</button>
@@ -838,10 +963,13 @@ function loadFromLibrary(i){
   if(!entry) return;
   const fields = fzpXmlToFields(entry.fzpXml);
   applyImportedFields(fields);
-  state.svgs = {...entry.svgs};
+  state.bg = {...entry.bg};
+  state.pinPos = JSON.parse(JSON.stringify(entry.pinPos));
+  state.pins = JSON.parse(JSON.stringify(entry.pins));
   document.getElementById('fzpXml').value = entry.fzpXml;
-  renderSvgPreviews();
-  refreshCard();
+  renderPins();
+  renderSvgGrid();
+  refreshComposedAll();
   validateAll();
   setStep(4);
   document.getElementById('editPanel').scrollIntoView({behavior:'smooth', block:'start'});
@@ -865,24 +993,17 @@ async function exportLibraryBundle(){
   setStatus("Bundle downloaded.", "status-ok");
 }
 
-/* ---------- Save / Load project (JSON round-trip) ---------- */
+/* ---------- Save / Load project ---------- */
 function saveProject(){
+  refreshComposedAll();
   const proj = {
-    reqName: document.getElementById('reqName').value,
-    reqType: document.getElementById('reqType').value,
-    reqNotes: document.getElementById('reqNotes').value,
-    fTitle: document.getElementById('fTitle').value,
-    fAuthor: document.getElementById('fAuthor').value,
-    fFamily: document.getElementById('fFamily').value,
-    fPackage: document.getElementById('fPackage').value,
-    fDesc: document.getElementById('fDesc').value,
-    fTags: document.getElementById('fTags').value,
-    pins: state.pins,
-    svgs: state.svgs,
-    fzpXml: document.getElementById('fzpXml').value,
-    pkgFormat: document.getElementById('pkgFormat').value,
-    editVisible: document.getElementById('editPanel').style.display !== 'none',
-    library
+    reqName: document.getElementById('reqName').value, reqType: document.getElementById('reqType').value,
+    reqNotes: document.getElementById('reqNotes').value, fTitle: document.getElementById('fTitle').value,
+    fAuthor: document.getElementById('fAuthor').value, fFamily: document.getElementById('fFamily').value,
+    fPackage: document.getElementById('fPackage').value, fDesc: document.getElementById('fDesc').value,
+    fTags: document.getElementById('fTags').value, pins: state.pins, bg: state.bg, pinPos: state.pinPos,
+    svgs: state.svgs, fzpXml: document.getElementById('fzpXml').value, pkgFormat: document.getElementById('pkgFormat').value,
+    editVisible: document.getElementById('editPanel').style.display !== 'none', library
   };
   const blob = new Blob([JSON.stringify(proj, null, 2)], {type:"application/json"});
   const a = document.createElement('a');
@@ -908,18 +1029,20 @@ function loadProjectFile(file){
       document.getElementById('fTags').value = proj.fTags || "";
       document.getElementById('pkgFormat').value = proj.pkgFormat || "fzpz";
       state.pins = proj.pins || [];
+      state.bg = proj.bg || {icon:null,breadboard:null,schematic:null,pcb:null};
+      state.pinPos = proj.pinPos || {breadboard:[],schematic:[],pcb:[]};
       state.svgs = proj.svgs || {icon:"",breadboard:"",schematic:"",pcb:""};
       library = proj.library || [];
+      syncPinPositions();
       renderPins();
       renderLibrary();
       document.getElementById('libraryPanel').style.display = library.length ? 'block' : 'none';
       document.getElementById('editPanel').style.display = proj.editVisible ? 'block' : 'none';
       if(proj.editVisible){
-        renderSvgPreviews();
+        renderSvgGrid();
         document.getElementById('fzpXml').value = proj.fzpXml || "";
         validateAll();
-        refreshCard();
-        setStep(state.svgs.breadboard ? 4 : 2);
+        setStep(state.bg.breadboard ? 4 : 2);
       } else { setStep(0); }
       setStatus("Project loaded.", "status-ok");
     }catch(e){ setStatus("Could not read project file: "+e.message, "status-err"); }
@@ -927,7 +1050,7 @@ function loadProjectFile(file){
   reader.readAsText(file);
 }
 
-/* ---------- Import an existing .fzp / .fzpz to edit ---------- */
+/* ---------- Import an existing .fzp / .fzpz ---------- */
 function fzpXmlToFields(xml){
   const doc = new DOMParser().parseFromString(xml, "application/xml");
   const t = (tag)=> doc.querySelector(tag)?.textContent.trim() || "";
@@ -935,8 +1058,7 @@ function fzpXmlToFields(xml){
   doc.querySelectorAll('property').forEach(p => props[p.getAttribute('name')] = p.textContent.trim());
   const tags = [...doc.querySelectorAll('tags > tag')].map(x=>x.textContent.trim());
   const pins = [...doc.querySelectorAll('connectors > connector')].map(c => ({
-    name: c.getAttribute('name') || "PIN",
-    type: c.getAttribute('type') || "male",
+    name: c.getAttribute('name') || "PIN", type: c.getAttribute('type') || "male",
     desc: c.querySelector('description')?.textContent.trim() || ""
   }));
   return { title: t('title'), author: t('author'), description: t('description'),
@@ -950,6 +1072,7 @@ function applyImportedFields(f){
   document.getElementById('fPackage').value = f.package || "";
   document.getElementById('fTags').value = (f.tags||[]).join(", ");
   state.pins = f.pins && f.pins.length ? f.pins : [{name:"VCC",type:"male",desc:""},{name:"GND",type:"male",desc:""}];
+  syncPinPositions();
   renderPins();
   document.getElementById('editPanel').style.display = 'block';
   refreshCard();
@@ -970,17 +1093,17 @@ async function importPartFile(file){
       for(const view of VIEWS){
         let svgEntry = null;
         zip.forEach((path, entry)=>{ if(new RegExp(view+'\\.svg$','i').test(path)) svgEntry = entry; });
-        state.svgs[view] = svgEntry ? await svgEntry.async("text") : "";
+        state.bg[view] = svgEntry ? svgTextToDataUri(await svgEntry.async("text")) : null;
       }
-      renderSvgPreviews();
+      renderSvgGrid();
+      refreshComposedAll();
       validateAll();
-      refreshCard();
       setStep(4);
     } else {
       const xml = await file.text();
       applyImportedFields(fzpXmlToFields(xml));
       document.getElementById('fzpXml').value = xml;
-      document.getElementById('svgGrid').innerHTML = '<div class="empty-hint">No embedded SVGs found in a plain .fzp — click Generate Files to create fresh ones.</div>';
+      document.getElementById('svgGrid').innerHTML = '<div class="empty-hint">No embedded artwork found in a plain .fzp — click Generate Files, or Generate/Upload per view once populated.</div>';
       setStep(2);
     }
     document.getElementById('editPanel').scrollIntoView({behavior:'smooth', block:'start'});
@@ -994,7 +1117,8 @@ function confirmReset(){
   resetAll();
 }
 function resetAll(){
-  state = { svgs:{icon:"",breadboard:"",schematic:"",pcb:""}, pins:[], valid:{icon:null,breadboard:null,schematic:null,pcb:null,fzp:null} };
+  state = { bg:{icon:null,breadboard:null,schematic:null,pcb:null}, pinPos:{breadboard:[],schematic:[],pcb:[]},
+    pins:[], svgs:{icon:"",breadboard:"",schematic:"",pcb:""} };
   document.getElementById('editPanel').style.display = 'none';
   document.getElementById('reqName').value = '';
   document.getElementById('reqType').value = '';
@@ -1004,6 +1128,12 @@ function resetAll(){
   setStatus("");
 }
 document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeZoom(); });
+
+/* Load saved API key on initial script run too (in case DOMContentLoaded already fired) */
+try{
+  const saved = localStorage.getItem('fritzing_gen_api_key');
+  if(saved) document.getElementById('apiKey').value = saved;
+}catch(e){}
 </script>
 </body>
 </html>
