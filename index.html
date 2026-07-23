@@ -35,11 +35,20 @@
   .lede{color:var(--silk-dim);font-size:13.5px;line-height:1.6;margin:14px 0 22px;max-width:70ch}
   .lede b{color:var(--copper-bright);font-weight:600}
 
-  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
   .toolbar button{background:transparent;border:1px dashed var(--trace-dim);color:var(--silk-dim);box-shadow:none;
     font-family:var(--font-mono);font-size:11.5px;font-weight:500;padding:8px 13px}
   .toolbar button:hover{border-color:var(--copper);color:var(--copper-bright);background:rgba(217,138,75,.06)}
   .toolbar button:active{transform:none}
+
+  .dropzone{display:flex;align-items:center;gap:14px;border:2px dashed var(--trace-dim);border-radius:10px;
+    padding:16px 20px;margin-bottom:20px;cursor:pointer;transition:border-color .15s, background .15s;background:rgba(217,138,75,.02)}
+  .dropzone:hover{border-color:var(--copper);background:rgba(217,138,75,.06)}
+  .dropzone.dragover{border-color:var(--copper-bright);background:rgba(245,180,111,.1);box-shadow:0 0 0 3px rgba(245,180,111,.15)}
+  .dz-icon{font-size:22px;color:var(--copper-bright);flex:none}
+  .dz-text{font-size:12.5px;color:var(--silk-dim);line-height:1.5}
+  .dz-text b{color:var(--silk)}
+  .dz-text code{background:#000;padding:1px 5px;border-radius:3px;color:var(--copper-bright)}
 
   .trace-stepper{display:flex;align-items:center;margin:22px 0 34px;position:relative}
   .trace-seg{flex:1;height:3px;background:var(--trace-dim);position:relative;border-radius:2px;transition:background .5s ease}
@@ -125,6 +134,9 @@
   .rm{color:var(--led-err)} .dup{color:var(--copper-bright)}
   .rm:hover,.dup:hover{transform:scale(1.3)}
   small.hint{color:var(--silk-dim);display:block;margin-top:8px;font-size:11px;line-height:1.5}
+  .log-line{font-size:10.5px;padding:3px 0;border-bottom:1px solid var(--trace-dim);color:var(--silk-dim)}
+  .log-line.status-ok{color:var(--led-ok)} .log-line.status-err{color:var(--led-err)}
+  .pinsearch{margin-top:8px}
 
   .svg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:10px}
   .svg-box{background:#0d0808;border:1px solid var(--trace-dim);border-radius:8px;padding:14px;text-align:center;position:relative}
@@ -145,9 +157,9 @@
   .pindot{position:absolute;width:15px;height:15px;border-radius:50%;background:var(--solder-bright);
     border:2px solid #fff;transform:translate(-50%,-50%);cursor:grab;box-shadow:0 0 0 1px #000;z-index:3}
   .pindot:active{cursor:grabbing}
-  .pindot .num{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:9px;background:#000;
-    color:#fff;padding:1px 5px;border-radius:3px;white-space:nowrap;opacity:0;transition:opacity .1s;pointer-events:none}
-  .pindot:hover .num{opacity:1}
+  .pindot .num{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:8.5px;background:rgba(0,0,0,.75);
+    color:#fff;padding:1px 4px;border-radius:3px;white-space:nowrap;opacity:.85;transition:opacity .1s;pointer-events:none}
+  .pindot:hover .num{opacity:1;font-size:9.5px}
   .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
   .presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .presets button{background:transparent;color:var(--silk-dim);border:1px dashed var(--trace-dim);box-shadow:none;
@@ -167,6 +179,19 @@
     padding:2px 7px;border-radius:9px}
 
   .lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:10px}
+  .compare-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
+  .compare-card{background:#0d0808;border:1px solid var(--trace-dim);border-radius:8px;padding:12px;font-size:12px}
+  .compare-card h5{margin:0 0 6px;font-family:var(--font-disp);font-size:12.5px;color:var(--copper-bright)}
+  .compare-card .snippet{color:var(--silk-dim);line-height:1.5;margin-bottom:8px;min-height:60px}
+  .compare-card.failed .snippet{color:var(--led-err)}
+  .stage.breadboard{
+    background-color:#e8dcc0;
+    background-image:
+      radial-gradient(circle, #b9ab8a 1.1px, transparent 1.3px),
+      linear-gradient(#d64545 2px, transparent 2px), linear-gradient(#3a6bd6 2px, transparent 2px);
+    background-size:14px 14px, 100% 100%, 100% 100%;
+    background-position:7px 7px, 0 6px, 0 calc(100% - 6px);
+  }
   .lib-card{background:#0d0808;border:1px solid var(--trace-dim);border-radius:8px;padding:10px;text-align:center}
   .lib-card .icon{width:100%;height:60px;background:#fdfaf5;border-radius:5px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden}
   .lib-card .icon img{max-width:100%;max-height:100%}
@@ -215,9 +240,17 @@
 <div class="toolbar">
   <button onclick="saveProject()">💾 Save Project (.json)</button>
   <button onclick="document.getElementById('projectImport').click()">📂 Load Project</button>
-  <button onclick="document.getElementById('fileImport').click()">⇪ Import Existing .fzp / .fzpz</button>
+  <button onclick="runDiagnostics()">🩺 Run Diagnostics</button>
   <input type="file" id="projectImport" accept=".json" onchange="loadProjectFile(this.files[0])">
   <input type="file" id="fileImport" accept=".fzp,.fzpz,.zip,.xml" onchange="importPartFile(this.files[0])">
+</div>
+<div id="diagPanel" style="display:none;margin-bottom:18px;background:#0a0606;border:1px solid var(--trace-dim);border-radius:8px;padding:14px 16px;font-size:12px"></div>
+
+<div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Import an existing Fritzing part file to edit"
+  onclick="document.getElementById('fileImport').click()"
+  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('fileImport').click();}">
+  <div class="dz-icon">⇪</div>
+  <div class="dz-text"><b>Edit an existing part</b> — drag a <code>.fzp</code> / <code>.fzpz</code> file here, or click to browse</div>
 </div>
 
 <div class="trace-stepper">
@@ -247,7 +280,7 @@
     <div>
       <label>Model <span class="help" title="Which model on OpenRouter generates specs, pins and artwork.">?</span></label>
       <select id="model">
-        <option value="openrouter/free">Auto-Free</option>
+        <option value="__auto_free">Auto (Free model)</option>
         <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
         <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku (fast)</option>
         <option value="openai/gpt-4o">GPT-4o</option>
@@ -279,12 +312,25 @@
   <small class="hint">Or start from a common type:</small>
   <div class="presets" id="presets"></div>
 
+  <small class="hint">Batch mode — generate several parts unattended (one name per line, saved straight to Library):</small>
+  <textarea id="batchNames" rows="2" placeholder="5V Relay Module&#10;Push Button 4-pin&#10;I2C Temp Sensor"></textarea>
+
   <div class="actions">
     <button id="suggestBtn" onclick="suggestSpecs()">① Suggest Specs &amp; Pins</button>
+    <button class="secondary" onclick="compareModels()">🔬 Compare 3 Models on This Part</button>
     <button id="genBtn" onclick="generatePart()">② Generate Files</button>
+    <button class="secondary" id="batchBtn" onclick="runBatch()">▤ Generate Batch → Library</button>
     <button class="secondary" onclick="confirmReset()">Reset</button>
   </div>
   <div id="status"></div>
+  <div class="compare-grid" id="compareGrid" style="display:none"></div>
+  <div id="usageCounter" style="font-size:10.5px;color:var(--silk-dim);margin-top:6px">Session usage: 0 requests · ~0 tokens</div>
+  <div style="margin-top:6px">
+    <button type="button" class="mini secondary" onclick="toggleActivityLog()">Show/Hide Activity Log</button>
+  </div>
+  <div id="activityLogWrap" style="display:none;margin-top:8px;max-height:160px;overflow:auto;background:#0a0606;border:1px solid var(--trace-dim);border-radius:5px;padding:8px">
+    <div id="activityLog"></div>
+  </div>
 </div>
 
 <div class="panel" id="editPanel" style="display:none">
@@ -313,6 +359,7 @@
   <input id="fTags" oninput="refreshCard()">
 
   <h3>Pins / Connectors <span class="count" id="pinCount">0 pins</span></h3>
+  <input class="pinsearch" id="pinFilter" placeholder="Filter pins by name or description... (useful for large pinouts)" oninput="renderPins()">
   <table class="pin-table" id="pinTable">
     <thead><tr><th>#</th><th>Name</th><th>Type</th><th>Description</th><th></th></tr></thead>
     <tbody id="pinBody"></tbody>
@@ -326,8 +373,34 @@
 
   <h3>Generated Views</h3>
   <small class="hint">For each view: generate artwork with the model, or upload your own image/SVG as the background — then drag the red dots onto the matching pins.</small>
+  <div class="checkline">
+    <input type="checkbox" id="snapGrid">
+    <label style="margin:0;text-transform:none;letter-spacing:0;font-size:11.5px" for="snapGrid">Snap pins to grid while dragging (evenly spaced 5% increments — useful for header/DIP-style pinouts)</label>
+  </div>
   <div class="svg-grid" id="svgGrid"><div class="empty-hint">No views yet — click <b>② Generate Files</b> above, or generate/upload artwork per view once this section is populated.</div></div>
   <input type="file" id="bgUpload" accept="image/*,.svg">
+
+  <h3>AI Edit <span class="help" title="Describe a change in plain English and the model will apply it — to the metadata/pins, or to a specific view's artwork.">?</span></h3>
+  <div class="row">
+    <div style="flex:2">
+      <label>What should change?</label>
+      <textarea id="editPrompt" rows="2" placeholder="e.g. 'Make VCC and GND thicker/red', 'Add a mounting hole in each corner of the PCB view', 'Rename D34 to SENSOR_IN', 'Make the icon look more like a relay'"></textarea>
+    </div>
+    <div>
+      <label>Apply to</label>
+      <select id="editScope">
+        <option value="meta">Metadata &amp; Pins</option>
+        <option value="icon">Icon artwork only</option>
+        <option value="breadboard">Breadboard artwork only</option>
+        <option value="schematic">Schematic artwork only</option>
+        <option value="pcb">PCB artwork only</option>
+        <option value="all_art">All artwork (icon+breadboard+schematic+pcb)</option>
+      </select>
+    </div>
+  </div>
+  <div class="actions">
+    <button id="aiEditBtn" onclick="applyAiEdit()">✎ Apply AI Edit</button>
+  </div>
 
   <h3>Raw .fzp XML <span><button class="mini secondary" onclick="copyXml()">Copy</button> <button class="mini secondary" onclick="rebuildXmlFromFields()">Rebuild from fields</button></span></h3>
   <textarea id="fzpXml" rows="14" oninput="state.fzp=this.value" placeholder="Generated after you click Generate Files."></textarea>
@@ -451,9 +524,17 @@ renderPinTemplates();
 document.getElementById('model').addEventListener('change', function(){
   document.getElementById('modelCustom').style.display = this.value === '__custom' ? 'block' : 'none';
 });
+const FREE_MODEL_FALLBACKS = [
+  "meta-llama/llama-3.1-8b-instruct:free",
+  "google/gemini-2.0-flash-exp:free",
+  "qwen/qwen-2.5-7b-instruct:free",
+  "mistralai/mistral-7b-instruct:free"
+];
 function getModel(){
   const sel = document.getElementById('model').value;
-  return sel === '__custom' ? (document.getElementById('modelCustom').value.trim() || 'anthropic/claude-3.5-sonnet') : sel;
+  if(sel === '__custom') return document.getElementById('modelCustom').value.trim() || 'anthropic/claude-3.5-sonnet';
+  if(sel === '__auto_free') return '__auto_free';
+  return sel;
 }
 function togglePw(){
   const el = document.getElementById('apiKey');
@@ -463,10 +544,72 @@ function togglePw(){
   btn.textContent = show ? 'HIDE' : 'SHOW';
 }
 
+let activityLog = [];
 function setStatus(msg, cls, busy){
   const s = document.getElementById('status');
   s.innerHTML = (busy ? '<span class="spinner"></span>' : '') + '<span>'+msg+'</span>';
   s.className = cls || '';
+  if(!busy && msg){
+    activityLog.unshift({msg, cls, time: new Date().toLocaleTimeString()});
+    if(activityLog.length > 25) activityLog.length = 25;
+    renderActivityLog();
+  }
+}
+function renderActivityLog(){
+  const el = document.getElementById('activityLog');
+  if(!el) return;
+  el.innerHTML = activityLog.map(e=>`<div class="log-line ${e.cls||''}">[${e.time}] ${e.msg}</div>`).join("");
+}
+function toggleActivityLog(){
+  const el = document.getElementById('activityLogWrap');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function runDiagnostics(){
+  const panel = document.getElementById('diagPanel');
+  panel.style.display = 'block';
+  const results = [];
+  const check = (label, ok, detail)=> results.push({label, ok, detail});
+
+  check("JSZip library loaded", !!window.JSZip, window.JSZip ? "" : "Packaging/export won't work — check network access to cdnjs.cloudflare.com.");
+
+  try{
+    localStorage.setItem('__diag_test','1');
+    const ok = localStorage.getItem('__diag_test') === '1';
+    localStorage.removeItem('__diag_test');
+    check("Local storage (for remembered API key)", ok);
+  }catch(e){ check("Local storage (for remembered API key)", false, e.message); }
+
+  try{
+    const doc = new DOMParser().parseFromString("<svg></svg>", "image/svg+xml");
+    check("DOMParser (SVG/XML validation)", !doc.querySelector('parsererror'));
+  }catch(e){ check("DOMParser (SVG/XML validation)", false, e.message); }
+
+  check("Clipboard API (Copy XML button)", !!(navigator.clipboard && navigator.clipboard.writeText));
+
+  try{
+    const blob = new Blob(["test"], {type:"text/plain"});
+    const url = URL.createObjectURL(blob);
+    check("File download (Blob/ObjectURL)", !!url);
+    URL.revokeObjectURL(url);
+  }catch(e){ check("File download (Blob/ObjectURL)", false, e.message); }
+
+  const key = document.getElementById('apiKey').value.trim();
+  if(key){
+    check("API key format", /^sk-or-/.test(key) || key.length > 10, /^sk-or-/.test(key) ? "" : "Doesn't look like a typical OpenRouter key (usually starts with sk-or-) — double check it.");
+    try{
+      const res = await fetch("https://openrouter.ai/api/v1/models", { headers:{ "Authorization":"Bearer "+key } });
+      check("OpenRouter API reachable with this key", res.ok, res.ok ? "" : "HTTP "+res.status+" — key may be invalid/expired, or network blocked.");
+    }catch(e){ check("OpenRouter API reachable with this key", false, "Network error: "+e.message); }
+  } else {
+    check("API key entered", false, "Enter a key above to test connectivity.");
+  }
+
+  panel.innerHTML = "<b style='color:var(--silk)'>Diagnostics</b><br>" + results.map(r=>
+    `<div style="margin-top:6px;color:${r.ok ? 'var(--led-ok)' : 'var(--led-err)'}">${r.ok?'✔':'✘'} ${r.label}${r.detail?` — <span style="color:var(--silk-dim)">${r.detail}</span>`:''}</div>`
+  ).join("");
+  const allOk = results.every(r=>r.ok);
+  setStatus(allOk ? "Diagnostics: all checks passed." : "Diagnostics: some checks failed — see panel above.", allOk ? "status-ok" : "status-err");
 }
 function setStep(n){
   for(let i=1;i<=4;i++) document.getElementById('pad'+i).className = 'trace-pad' + (i<=n ? ' done' : '');
@@ -481,6 +624,17 @@ function markFieldError(id, show){
 function clearFieldError(id){ markFieldError(id, false); }
 
 async function callModel(sys, user, key, model, _retried){
+  if(model === '__auto_free'){
+    let lastErr;
+    for(const m of FREE_MODEL_FALLBACKS){
+      try{ return await callModelOnce(sys, user, key, m); }
+      catch(e){ lastErr = e; }
+    }
+    throw new Error("All free models failed. Last error: " + (lastErr ? lastErr.message : "unknown"));
+  }
+  return callModelOnce(sys, user, key, model, _retried);
+}
+async function callModelOnce(sys, user, key, model, _retried){
   let res;
   try{
     res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -489,16 +643,25 @@ async function callModel(sys, user, key, model, _retried){
       body: JSON.stringify({ model, messages:[{role:"system",content:sys},{role:"user",content:user}] })
     });
   }catch(networkErr){
-    if(!_retried){ await new Promise(r=>setTimeout(r,900)); return callModel(sys,user,key,model,true); }
+    if(!_retried){ await new Promise(r=>setTimeout(r,900)); return callModelOnce(sys,user,key,model,true); }
     throw new Error("Network error reaching OpenRouter: "+networkErr.message);
   }
   if(!res.ok){
-    if(res.status >= 500 && !_retried){ await new Promise(r=>setTimeout(r,900)); return callModel(sys,user,key,model,true); }
+    if(res.status >= 500 && !_retried){ await new Promise(r=>setTimeout(r,900)); return callModelOnce(sys,user,key,model,true); }
     const t = await res.text();
     throw new Error("HTTP "+res.status+": "+t.slice(0,300));
   }
   const data = await res.json();
-  return (data.choices?.[0]?.message?.content || "").trim();
+  const content = (data.choices?.[0]?.message?.content || "").trim();
+  recordUsage(sys.length + user.length, content.length);
+  return content;
+}
+let usage = { requests: 0, chars: 0 };
+function recordUsage(inChars, outChars){
+  usage.requests += 1;
+  usage.chars += inChars + outChars;
+  const el = document.getElementById('usageCounter');
+  if(el) el.textContent = `Session usage: ${usage.requests} request${usage.requests===1?'':'s'} · ~${Math.round(usage.chars/4)} tokens (estimate)`;
 }
 function stripFence(text, lang){
   const re = new RegExp("^```(?:"+lang+")?\\n?|```$","g");
@@ -550,6 +713,67 @@ function populateFieldsFromSpec(obj, reqName, reqType){
   refreshCard();
 }
 
+/* ---------- Compare multiple models on the same spec request ---------- */
+async function compareModels(){
+  const key = document.getElementById('apiKey').value.trim();
+  const name = document.getElementById('reqName').value.trim();
+  const type = document.getElementById('reqType').value.trim();
+  const notes = document.getElementById('reqNotes').value.trim();
+  clearFieldError('apiKey'); clearFieldError('reqName');
+  let bad = false;
+  if(!key){ markFieldError('apiKey', true); bad = true; }
+  if(!name){ markFieldError('reqName', true); bad = true; }
+  if(bad){ setStatus("Fix the highlighted field(s) above.", "status-err"); return; }
+
+  const candidates = ["anthropic/claude-3.5-sonnet", "openai/gpt-4o-mini", "google/gemini-2.0-flash-001"];
+  const grid = document.getElementById('compareGrid');
+  grid.style.display = "grid";
+  grid.innerHTML = candidates.map(m=>`<div class="compare-card" id="cmp-${btoa(m).replace(/[^a-zA-Z0-9]/g,'')}"><h5>${esc(m)}</h5><div class="snippet">Running...</div></div>`).join("");
+
+  setStatus(`Comparing ${candidates.length} models...`, "status-busy", true);
+  const sys = `You suggest Fritzing part specs. Respond ONLY with raw JSON (no markdown) with keys:
+title, description, family, package (THT/SMD/etc), tags (array of strings),
+pins (array of {name, type, description}) where type is one of male/female/pad.
+Propose the most typical, realistic pinout for this kind of component.`;
+  const userMsg = `Name: ${name}\nType: ${type}\nNotes: ${notes}`;
+
+  const results = await Promise.allSettled(candidates.map(m => callModelOnce(sys, userMsg, key, m)));
+  window.__compareResults = [];
+  results.forEach((r, i)=>{
+    const m = candidates[i];
+    const card = document.getElementById(`cmp-${btoa(m).replace(/[^a-zA-Z0-9]/g,'')}`);
+    if(r.status === 'fulfilled'){
+      try{
+        const obj = JSON.parse(stripFence(r.value, "json"));
+        const idx = window.__compareResults.length;
+        window.__compareResults.push(obj);
+        card.innerHTML = `<h5>${esc(m)}</h5>
+          <div class="snippet"><b>${esc(obj.title||name)}</b><br>${esc((obj.description||"").slice(0,140))}<br><span style="color:var(--copper-bright)">${(obj.pins||[]).length} pins</span></div>
+          <button class="mini secondary" onclick="useComparisonResult(${idx})">Use This</button>`;
+      }catch(e){
+        card.className = "compare-card failed";
+        card.innerHTML = `<h5>${esc(m)}</h5><div class="snippet">Returned invalid JSON: ${esc(r.value.slice(0,120))}</div>`;
+      }
+    } else {
+      card.className = "compare-card failed";
+      card.innerHTML = `<h5>${esc(m)}</h5><div class="snippet">Failed: ${esc(r.reason.message || String(r.reason))}</div>`;
+    }
+  });
+  setStatus("Comparison complete — pick a result to use.", "status-ok");
+}
+function useComparisonResult(idx){
+  const obj = window.__compareResults[idx];
+  if(!obj) return;
+  populateFieldsFromSpec(obj, obj.title, obj.family);
+  document.getElementById('compareGrid').style.display = 'none';
+  state.bg = {icon:null,breadboard:null,schematic:null,pcb:null};
+  state.svgs = {icon:"",breadboard:"",schematic:"",pcb:""};
+  document.getElementById('svgGrid').innerHTML = '<div class="empty-hint">No views yet — click <b>② Generate Files</b> above, or generate/upload artwork per view once this section is populated.</div>';
+  setStep(2);
+  document.getElementById('editPanel').scrollIntoView({behavior:'smooth', block:'start'});
+  setStatus("Applied the selected model's result.", "status-ok");
+}
+
 async function suggestSpecs(){
   const key = document.getElementById('apiKey').value.trim();
   const model = getModel();
@@ -572,7 +796,9 @@ title, description, family, package (THT/SMD/etc), tags (array of strings),
 pins (array of {name, type, description}) where type is one of male/female/pad.
 Propose the most typical, realistic pinout for this kind of component.`;
     const raw = stripFence(await callModel(sys, `Name: ${name}\nType: ${type}\nNotes: ${notes}`, key, model), "json");
-    const obj = JSON.parse(raw);
+    let obj;
+    try{ obj = JSON.parse(raw); }
+    catch(parseErr){ throw new Error("Model didn't return valid JSON (try a different model). Raw response: " + raw.slice(0,200)); }
     populateFieldsFromSpec(obj, name, type);
     state.bg = {icon:null,breadboard:null,schematic:null,pcb:null};
     state.svgs = {icon:"",breadboard:"",schematic:"",pcb:""};
@@ -590,7 +816,10 @@ function renderPins(){
   const body = document.getElementById('pinBody');
   body.innerHTML = "";
   document.getElementById('pinCount').textContent = state.pins.length + (state.pins.length===1 ? " pin" : " pins");
+  const filterEl = document.getElementById('pinFilter');
+  const query = filterEl ? filterEl.value.trim().toLowerCase() : "";
   state.pins.forEach((p,i)=>{
+    if(query && !p.name.toLowerCase().includes(query) && !(p.desc||"").toLowerCase().includes(query)) return;
     const tr = document.createElement('tr');
     tr.draggable = true;
     tr.dataset.idx = i;
@@ -697,9 +926,10 @@ function rebuildXmlFromFields(){
 
 /* ---------- Compose final export SVG (background + positioned pins) ---------- */
 function composeExportSvg(view){
-  const [w,h] = STAGE_DIM[view];
-  let bgTag = "";
-  if(state.bg[view]) bgTag = `<image href="${state.bg[view]}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
+  try{
+    const [w,h] = STAGE_DIM[view];
+    let bgTag = "";
+    if(state.bg[view]) bgTag = `<image href="${state.bg[view]}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
   let circles = "";
   if(view !== 'icon'){
     circles = state.pins.map((p,i)=>{
@@ -709,6 +939,10 @@ function composeExportSvg(view){
     }).join("");
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${bgTag}${circles}</svg>`;
+  }catch(e){
+    console.error("composeExportSvg failed for view", view, e);
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"></svg>`;
+  }
 }
 function refreshComposedSvg(view){ state.svgs[view] = composeExportSvg(view); }
 function refreshComposedAll(){ VIEWS.forEach(refreshComposedSvg); refreshCard(); }
@@ -746,10 +980,13 @@ function startDrag(view, idx, ev){
   ev.preventDefault(); ev.stopPropagation();
   const stage = document.getElementById('stageHolder-'+view);
   const rect = stage.getBoundingClientRect();
+  const snap = ()=> document.getElementById('snapGrid').checked;
+  const GRID = 0.05;
   function onMove(e){
     let x = (e.clientX - rect.left) / rect.width;
     let y = (e.clientY - rect.top) / rect.height;
     x = Math.min(1, Math.max(0, x)); y = Math.min(1, Math.max(0, y));
+    if(snap()){ x = Math.round(x/GRID)*GRID; y = Math.round(y/GRID)*GRID; }
     state.pinPos[view][idx] = {x,y};
     renderStage(view);
     refreshComposedSvg(view);
@@ -784,7 +1021,7 @@ document.getElementById('bgUpload').addEventListener('change', function(){
 function triggerUpload(view){ uploadTargetView = view; document.getElementById('bgUpload').click(); }
 
 /* ---------- AI artwork generation per view ---------- */
-async function generateArtworkForView(view, key, model){
+async function generateArtworkForView(view, key, model, editInstruction){
   const title = document.getElementById('fTitle').value;
   let sys;
   if(view === 'icon'){
@@ -792,12 +1029,72 @@ async function generateArtworkForView(view, key, model){
   } else {
     sys = `Generate a clean, simple ${view} view background SVG (viewBox 0 0 ${STAGE_DIM[view][0]} ${STAGE_DIM[view][1]}) for a part called "${title}". Show the part's outline/body only — do NOT draw connector pins or numbered dots, those are added separately. Output ONLY raw valid SVG, no markdown, no commentary.`;
   }
-  const svg = stripFence(await callModel(sys, `Part: ${title}`, key, model), "svg|xml");
+  let userMsg = `Part: ${title}`;
+  if(editInstruction){
+    sys += `\nYou are EDITING existing artwork based on a user instruction. Preserve the overall style/layout unless the instruction says otherwise, and apply ONLY the requested change.`;
+    userMsg = `Part: ${title}\nExisting artwork (SVG source):\n${state.rawArt && state.rawArt[view] ? state.rawArt[view] : "(none yet)"}\n\nRequested change: ${editInstruction}`;
+  }
+  const svg = stripFence(await callModel(sys, userMsg, key, model), "svg|xml");
+  state.rawArt = state.rawArt || {};
+  state.rawArt[view] = svg;
   state.bg[view] = svgTextToDataUri(svg);
   renderStage(view);
   refreshComposedSvg(view);
   refreshCard();
 }
+/* ---------- AI Edit (natural-language edits after generation) ---------- */
+async function applyAiEdit(){
+  const key = document.getElementById('apiKey').value.trim();
+  const model = getModel();
+  const instruction = document.getElementById('editPrompt').value.trim();
+  const scope = document.getElementById('editScope').value;
+  const btn = document.getElementById('aiEditBtn');
+
+  clearFieldError('apiKey');
+  if(!key){ markFieldError('apiKey', true); setStatus("Enter your OpenRouter API key.", "status-err"); return; }
+  if(!instruction){ setStatus("Describe what should change first.", "status-err"); return; }
+
+  btn.disabled = true;
+  try{
+    if(scope === 'meta'){
+      setStatus("Applying edit to metadata & pins...", "status-busy", true);
+      const current = {
+        title: document.getElementById('fTitle').value,
+        description: document.getElementById('fDesc').value,
+        family: document.getElementById('fFamily').value,
+        package: document.getElementById('fPackage').value,
+        tags: document.getElementById('fTags').value.split(",").map(t=>t.trim()).filter(Boolean),
+        pins: state.pins.map(p=>({name:p.name, type:p.type, description:p.desc}))
+      };
+      const sys = `You edit Fritzing part specs based on a user instruction. You are given the CURRENT spec as JSON
+and a requested change. Respond ONLY with the FULL UPDATED JSON object (same shape: title, description, family,
+package, tags array, pins array of {name,type,description}). Keep everything not affected by the instruction
+unchanged. Do not drop pins unless explicitly asked to remove them.`;
+      const raw = stripFence(await callModel(sys, `Current spec:\n${JSON.stringify(current)}\n\nRequested change: ${instruction}`, key, model), "json");
+      let updated;
+      try{ updated = JSON.parse(raw); }
+      catch(parseErr){ throw new Error("Model didn't return valid JSON (try a different model). Raw response: " + raw.slice(0,200)); }
+      populateFieldsFromSpec(updated, updated.title, updated.family);
+      rebuildXmlFromFields();
+      renderAllStages();
+      refreshComposedAll();
+      setStatus("Metadata & pins updated. Note: artwork wasn't regenerated — use an artwork scope if pin changes need reflecting visually.", "status-ok");
+    } else if(scope === 'all_art'){
+      for(const view of VIEWS){
+        setStatus(`Applying edit to ${view} artwork...`, "status-busy", true);
+        await generateArtworkForView(view, key, model, instruction);
+      }
+      setStatus("Edit applied to all artwork views.", "status-ok");
+    } else {
+      setStatus(`Applying edit to ${scope} artwork...`, "status-busy", true);
+      await generateArtworkForView(scope, key, model, instruction);
+      setStatus(`${scope} artwork updated.`, "status-ok");
+    }
+    validateAll();
+  }catch(e){ setStatus("Error: "+e.message, "status-err"); }
+  finally{ btn.disabled = false; }
+}
+
 async function regenerateView(view){
   const key = document.getElementById('apiKey').value.trim();
   const model = getModel();
@@ -805,6 +1102,34 @@ async function regenerateView(view){
   setStatus(`Generating ${view} artwork...`, "status-busy", true);
   try{ await generateArtworkForView(view, key, model); setStatus(`${view} artwork generated.`, "status-ok"); }
   catch(e){ setStatus("Error: "+e.message, "status-err"); }
+}
+
+/* ---------- Batch generation ---------- */
+async function runBatch(){
+  const key = document.getElementById('apiKey').value.trim();
+  const names = document.getElementById('batchNames').value.split("\n").map(s=>s.trim()).filter(Boolean);
+  const btn = document.getElementById('batchBtn');
+  clearFieldError('apiKey');
+  if(!key){ markFieldError('apiKey', true); setStatus("Enter your OpenRouter API key.", "status-err"); return; }
+  if(!names.length){ setStatus("Add at least one part name to the batch box.", "status-err"); return; }
+
+  btn.disabled = true;
+  let done = 0;
+  try{
+    for(const name of names){
+      setStatus(`Batch ${done+1}/${names.length}: "${name}" — suggesting specs...`, "status-busy", true);
+      document.getElementById('reqName').value = name;
+      document.getElementById('reqType').value = '';
+      document.getElementById('reqNotes').value = '';
+      await suggestSpecs();
+      setStatus(`Batch ${done+1}/${names.length}: "${name}" — generating files...`, "status-busy", true);
+      await generatePart();
+      saveCurrentToLibrary();
+      done++;
+    }
+    setStatus(`Batch complete — ${done}/${names.length} parts saved to Library.`, "status-ok");
+  }catch(e){ setStatus(`Batch stopped after ${done}/${names.length}: ${e.message}`, "status-err"); }
+  finally{ btn.disabled = false; }
 }
 
 /* ---------- Main generate flow ---------- */
@@ -871,12 +1196,28 @@ function validateSvg(view){
   badge.className = "led led-ok";
 }
 function validateFzp(xml){ return true; }
+function lintSpec(){
+  const issues = [];
+  const title = document.getElementById('fTitle').value.trim();
+  const family = document.getElementById('fFamily').value.trim();
+  if(!title) issues.push("part title is empty");
+  if(!family) issues.push("family is empty (Fritzing uses this to group variants)");
+  if(!state.pins.length) issues.push("no pins defined");
+  const names = state.pins.map(p=>p.name.trim().toLowerCase());
+  const dupes = names.filter((n,i)=> n && names.indexOf(n) !== i);
+  if(dupes.length) issues.push("duplicate pin name(s): " + [...new Set(dupes)].join(", "));
+  const blank = state.pins.filter(p=>!p.name.trim()).length;
+  if(blank) issues.push(blank + " pin(s) have a blank name");
+  return issues;
+}
 function validateAll(){
   refreshComposedAll();
   VIEWS.forEach(validateSvg);
   const missing = VIEWS.filter(v=>!state.bg[v]);
-  if(missing.length) setStatus("Missing artwork for: "+missing.join(", ")+" — generate or upload it.", "status-err");
-  else setStatus("Everything has artwork and positioned pins — ready to export.", "status-ok");
+  const lint = lintSpec();
+  const problems = [...missing.map(v=>`missing artwork: ${v}`), ...lint];
+  if(problems.length) setStatus("Issues found — " + problems.join(" · "), "status-err");
+  else setStatus("Everything has artwork and positioned pins, no lint issues — ready to export.", "status-ok");
 }
 function copyXml(){
   navigator.clipboard.writeText(document.getElementById('fzpXml').value || "");
@@ -1128,7 +1469,33 @@ function resetAll(){
   setStep(0);
   setStatus("");
 }
-document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeZoom(); });
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape') closeZoom();
+  const mod = e.ctrlKey || e.metaKey;
+  if(mod && e.key.toLowerCase() === 's'){ e.preventDefault(); saveProject(); }
+  if(mod && e.key === 'Enter'){ e.preventDefault(); suggestSpecs(); }
+});
+window.addEventListener('error', (e)=>{
+  try{ setStatus("Unexpected error: " + (e.message || "unknown") + (e.filename ? ` (line ${e.lineno})` : ""), "status-err"); }catch(_){}
+});
+window.addEventListener('unhandledrejection', (e)=>{
+  try{ setStatus("Unexpected error: " + (e.reason && e.reason.message ? e.reason.message : e.reason), "status-err"); }catch(_){}
+});
+window.addEventListener('beforeunload', (e)=>{
+  const hasWork = document.getElementById('editPanel').style.display !== 'none';
+  if(hasWork){ e.preventDefault(); e.returnValue = ''; }
+});
+
+/* ---------- Drag-and-drop import zone ---------- */
+(function initDropzone(){
+  const dz = document.getElementById('dropzone');
+  ['dragenter','dragover'].forEach(evt=> dz.addEventListener(evt, (e)=>{ e.preventDefault(); dz.classList.add('dragover'); }));
+  ['dragleave','drop'].forEach(evt=> dz.addEventListener(evt, (e)=>{ e.preventDefault(); dz.classList.remove('dragover'); }));
+  dz.addEventListener('drop', (e)=>{
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(file) importPartFile(file);
+  });
+})();
 
 /* Load saved API key on initial script run too (in case DOMContentLoaded already fired) */
 try{
