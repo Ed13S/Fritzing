@@ -138,7 +138,7 @@
   .log-line.status-ok{color:var(--led-ok)} .log-line.status-err{color:var(--led-err)}
   .pinsearch{margin-top:8px}
 
-  .svg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:10px}
+  .svg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px;margin-top:10px}
   .svg-box{background:#0d0808;border:1px solid var(--trace-dim);border-radius:8px;padding:14px;text-align:center;position:relative}
   .svg-box .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
   .svg-box h4{margin:0;color:var(--silk-dim);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
@@ -148,14 +148,22 @@
   .led-err{background:rgba(255,90,90,.1);color:var(--led-err)} .led-err::before{background:var(--led-err);box-shadow:0 0 6px var(--led-err)}
   .led-unk{background:rgba(184,154,143,.08);color:var(--silk-dim)} .led-unk::before{background:var(--silk-dim)}
 
-  .stage{position:relative;background:#fdfaf5;border-radius:6px;overflow:hidden;
+  .stage{position:relative;background:#fdfaf5;border-radius:6px;overflow:hidden;min-height:220px;
     box-shadow:inset 0 0 0 6px #eee2d0, inset 0 0 0 7px #c9a876;touch-action:none}
   .stage.icon{aspect-ratio:1/1} .stage.breadboard{aspect-ratio:1/1}
   .stage.schematic{aspect-ratio:320/260} .stage.pcb{aspect-ratio:380/260}
   .stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;padding:8px}
+  .stage.show-grid::before{
+    content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(162,20,31,.18) 0 1px, transparent 1px 5%),
+      repeating-linear-gradient(90deg, rgba(162,20,31,.18) 0 1px, transparent 1px 5%);
+  }
   .stage .placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#b3987f;font-size:11px;text-align:center;padding:14px}
-  .pindot{position:absolute;width:15px;height:15px;border-radius:50%;background:var(--solder-bright);
-    border:2px solid #fff;transform:translate(-50%,-50%);cursor:grab;box-shadow:0 0 0 1px #000;z-index:3}
+  .pindot{position:absolute;width:12px;height:12px;border-radius:50%;background:rgba(226,39,58,.5);
+    border:1.5px solid rgba(255,255,255,.9);transform:translate(-50%,-50%);cursor:grab;box-shadow:0 0 0 1px rgba(0,0,0,.6);z-index:3}
+  .pindot::after{content:"";position:absolute;top:50%;left:50%;width:2px;height:2px;background:#000;
+    border-radius:50%;transform:translate(-50%,-50%)}
   .pindot:active{cursor:grabbing}
   .pindot .num{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:8.5px;background:rgba(0,0,0,.75);
     color:#fff;padding:1px 4px;border-radius:3px;white-space:nowrap;opacity:.85;transition:opacity .1s;pointer-events:none}
@@ -374,7 +382,7 @@
   <h3>Generated Views</h3>
   <small class="hint">For each view: generate artwork with the model, or upload your own image/SVG as the background — then drag the red dots onto the matching pins.</small>
   <div class="checkline">
-    <input type="checkbox" id="snapGrid">
+    <input type="checkbox" id="snapGrid" onchange="renderAllStages()">
     <label style="margin:0;text-transform:none;letter-spacing:0;font-size:11.5px" for="snapGrid">Snap pins to grid while dragging (evenly spaced 5% increments — useful for header/DIP-style pinouts)</label>
   </div>
   <div class="svg-grid" id="svgGrid"><div class="empty-hint">No views yet — click <b>② Generate Files</b> above, or generate/upload artwork per view once this section is populated.</div></div>
@@ -668,6 +676,9 @@ function stripFence(text, lang){
   return text.replace(re,"").trim();
 }
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function sanitizeFilename(name){
+  return (name || "part").replace(/[<>:"/\\|?*\x00-\x1F]/g, "").replace(/\s+/g,"_").replace(/_+/g,"_").replace(/^\.+/,"").slice(0,120) || "part";
+}
 function svgTextToDataUri(svg){ return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg))); }
 
 /* ---------- Pin position defaults + sync ---------- */
@@ -929,16 +940,27 @@ function composeExportSvg(view){
   try{
     const [w,h] = STAGE_DIM[view];
     let bgTag = "";
-    if(state.bg[view]) bgTag = `<image href="${state.bg[view]}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
+    if(state.bg[view]) bgTag = `<image xlink:href="${state.bg[view]}" href="${state.bg[view]}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
   let circles = "";
+  let leads = "";
   if(view !== 'icon'){
+    if(view === 'schematic'){
+      leads = state.pins.map((p,i)=>{
+        const pos = (state.pinPos[view] && state.pinPos[view][i]) || {x:.5,y:.5};
+        const cx = pos.x*w, cy = pos.y*h;
+        const leadLen = w*0.07;
+        const towardCenter = pos.x < 0.5 ? 1 : -1;
+        const x2 = cx + leadLen*towardCenter;
+        return `<line x1="${cx.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="#1a1a1a" stroke-width="1.6"/>`;
+      }).join("");
+    }
     circles = state.pins.map((p,i)=>{
       const pos = (state.pinPos[view] && state.pinPos[view][i]) || {x:.5,y:.5};
       const id = view==='pcb' ? `connector${i}pad` : `connector${i}pin`;
       return `<circle id="${id}" cx="${(pos.x*w).toFixed(1)}" cy="${(pos.y*h).toFixed(1)}" r="4.5" fill="#2a2a2a" stroke="#fff" stroke-width="0.8"/>`;
     }).join("");
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${bgTag}${circles}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${bgTag}${leads}${circles}</svg>`;
   }catch(e){
     console.error("composeExportSvg failed for view", view, e);
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"></svg>`;
@@ -953,6 +975,8 @@ function renderStage(view){
   const holder = document.getElementById('stageHolder-'+view);
   if(!holder) return;
   holder.innerHTML = "";
+  const snapOn = document.getElementById('snapGrid') && document.getElementById('snapGrid').checked;
+  holder.classList.toggle('show-grid', !!snapOn && view !== 'icon');
   if(state.bg[view]){
     const img = document.createElement('img');
     img.src = state.bg[view];
@@ -962,6 +986,24 @@ function renderStage(view){
     ph.className = "placeholder";
     ph.textContent = "No artwork yet — Generate or Upload Image";
     holder.appendChild(ph);
+  }
+  if(view === 'schematic'){
+    const overlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    overlay.setAttribute("style", "position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none");
+    overlay.setAttribute("viewBox", `0 0 100 100`);
+    overlay.setAttribute("preserveAspectRatio", "none");
+    state.pins.forEach((p,i)=>{
+      const pos = (state.pinPos[view] && state.pinPos[view][i]) || {x:.5,y:.5};
+      const cx = pos.x*100, cy = pos.y*100;
+      const leadLen = 7;
+      const x2 = cx + leadLen*(pos.x < 0.5 ? 1 : -1);
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", cx); line.setAttribute("y1", cy);
+      line.setAttribute("x2", x2); line.setAttribute("y2", cy);
+      line.setAttribute("stroke", "#1a1a1a"); line.setAttribute("stroke-width", "0.8");
+      overlay.appendChild(line);
+    });
+    holder.appendChild(overlay);
   }
   if(view !== 'icon'){
     state.pins.forEach((p,i)=>{
@@ -1010,10 +1052,16 @@ document.getElementById('bgUpload').addEventListener('change', function(){
   const reader = new FileReader();
   reader.onload = ()=>{
     state.bg[view] = reader.result;
+    if(view !== 'icon'){
+      const defaults = defaultPositionsForCount(state.pins.length);
+      state.pinPos[view] = state.pins.map((p,i)=> defaults[i] || {x:.5,y:.5});
+    }
     renderStage(view);
     refreshComposedSvg(view);
     refreshCard();
-    setStatus(`${view} background uploaded.`, "status-ok");
+    setStatus(view === 'icon'
+      ? "icon background uploaded."
+      : `${view} background uploaded — pin dots were auto-reset to a default layout for the new image. Drag them onto the right spots.`, "status-ok");
   };
   reader.readAsDataURL(file);
   this.value = "";
@@ -1228,11 +1276,10 @@ function copyXml(){
 async function buildFzpzBlob(fzpXml, svgs, fmt){
   const zip = new JSZip();
   zip.file("part.fzp", fzpXml);
-  const base = fmt === "fzpz" ? zip.folder("svg").folder("generic") : zip;
-  base.folder("icon").file("icon.svg", svgs.icon || "<svg></svg>");
-  base.folder("breadboard").file("breadboard.svg", svgs.breadboard || "<svg></svg>");
-  base.folder("schematic").file("schematic.svg", svgs.schematic || "<svg></svg>");
-  base.folder("pcb").file("pcb.svg", svgs.pcb || "<svg></svg>");
+  zip.folder("icon").file("icon.svg", svgs.icon || "<svg></svg>");
+  zip.folder("breadboard").file("breadboard.svg", svgs.breadboard || "<svg></svg>");
+  zip.folder("schematic").file("schematic.svg", svgs.schematic || "<svg></svg>");
+  zip.folder("pcb").file("pcb.svg", svgs.pcb || "<svg></svg>");
   return zip.generateAsync({type:"blob"});
 }
 async function packageAndDownload(){
@@ -1244,7 +1291,7 @@ async function packageAndDownload(){
   const blob = await buildFzpzBlob(fzpXml, state.svgs, fmt);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = (document.getElementById('fTitle').value || "custom_part").replace(/\s+/g,"_") + "." + fmt;
+  a.download = sanitizeFilename(document.getElementById('fTitle').value || "custom_part") + "." + fmt;
   a.click();
   setStatus("Package downloaded.", "status-ok");
 }
@@ -1325,7 +1372,7 @@ async function exportLibraryBundle(){
   const bundle = new JSZip();
   for(const entry of library){
     const blob = await buildFzpzBlob(entry.fzpXml, entry.svgs, "fzpz");
-    bundle.file(entry.title.replace(/\s+/g,"_") + ".fzpz", blob);
+    bundle.file(sanitizeFilename(entry.title) + ".fzpz", blob);
   }
   const blob = await bundle.generateAsync({type:"blob"});
   const a = document.createElement('a');
@@ -1350,7 +1397,7 @@ function saveProject(){
   const blob = new Blob([JSON.stringify(proj, null, 2)], {type:"application/json"});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = (proj.fTitle || proj.reqName || "fritzing_project").replace(/\s+/g,"_") + ".project.json";
+  a.download = sanitizeFilename(proj.fTitle || proj.reqName || "fritzing_project") + ".project.json";
   a.click();
   setStatus("Project saved.", "status-ok");
 }
