@@ -157,7 +157,7 @@
     box-shadow:inset 0 0 0 6px #eee2d0, inset 0 0 0 7px #c9a876;touch-action:none}
   .stage.icon{aspect-ratio:1/1} .stage.breadboard{aspect-ratio:1/1}
   .stage.schematic{aspect-ratio:320/260} .stage.pcb{aspect-ratio:380/260}
-  .stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;padding:8px}
+  .stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
   .stage{isolation:isolate}
   .stage.show-grid::before{
     content:"";position:absolute;inset:0;pointer-events:none;z-index:5;
@@ -294,7 +294,8 @@
     <div>
       <label>Model <span class="help" data-help="Which model on OpenRouter generates specs, pins and artwork." onclick="toggleHelp(this)">?</span></label>
       <select id="model">
-        <option value="__auto_free">Auto (Free model)</option>
+        <option value="openrouter/free">Auto (Free model)</option>
+        <option value="openrouter/auto">Auto (paid model)</option>
         <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
         <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku (fast)</option>
         <option value="openai/gpt-4o">GPT-4o</option>
@@ -332,6 +333,7 @@
   <div class="actions">
     <button id="suggestBtn" onclick="suggestSpecs()">① Suggest Specs &amp; Pins</button>
     <button class="secondary" onclick="compareModels()">🔬 Compare 3 Models on This Part</button>
+    <button class="secondary" onclick="searchExistingParts()">🔎 Search Existing Fritzing Parts</button>
     <button id="genBtn" onclick="generatePart()">② Generate Files</button>
     <button class="secondary" id="batchBtn" onclick="runBatch()">▤ Generate Batch → Library</button>
     <button class="secondary" onclick="confirmReset()">Reset</button>
@@ -742,6 +744,56 @@ function populateFieldsFromSpec(obj, reqName, reqType){
 }
 
 /* ---------- Compare multiple models on the same spec request ---------- */
+/* ---------- Search Fritzing's real core-parts index for existing matches (free, no API key needed) ---------- */
+let __fritzingPartsIndex = null;
+async function loadFritzingPartsIndex(){
+  if(__fritzingPartsIndex) return __fritzingPartsIndex;
+  const res = await fetch("https://fritzing.github.io/fritzing-parts/fzp/");
+  if(!res.ok) throw new Error("HTTP "+res.status+" fetching the Fritzing parts index.");
+  const text = await res.text();
+  __fritzingPartsIndex = JSON.parse(text);
+  return __fritzingPartsIndex;
+}
+async function searchExistingParts(){
+  const name = document.getElementById('reqName').value.trim();
+  clearFieldError('reqName');
+  if(!name){ markFieldError('reqName', true); setStatus("Enter a part name first.", "status-err"); return; }
+
+  const grid = document.getElementById('compareGrid');
+  grid.style.display = "grid";
+  grid.innerHTML = `<div class="compare-card"><div class="snippet">Searching Fritzing's official core parts index...</div></div>`;
+  setStatus("Searching existing Fritzing parts (no API key needed for this)...", "status-busy", true);
+  try{
+    const index = await loadFritzingPartsIndex();
+    const words = name.toLowerCase().split(/\s+/).filter(w=>w.length>2);
+    const paths = Object.keys(index);
+    const scored = paths.map(p=>{
+      const lp = p.toLowerCase();
+      const score = words.reduce((s,w)=> s + (lp.includes(w) ? 1 : 0), 0);
+      return {p, score};
+    }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,12);
+
+    if(!scored.length){
+      grid.innerHTML = `<div class="compare-card"><div class="snippet">No matches found in Fritzing's official core parts library for "${esc(name)}". You're likely building something genuinely new — go ahead and generate it.</div></div>`;
+      setStatus("No existing part found — safe to generate a new one.", "status-ok");
+      return;
+    }
+    grid.innerHTML = scored.map(({p, score})=>{
+      const url = index[p];
+      const displayName = p.replace(/^core\//,"").replace(/\.fzp$/,"");
+      return `<div class="compare-card">
+        <h5>${esc(displayName)}</h5>
+        <div class="snippet">Fritzing core part — ${score} keyword match${score===1?"":"es"}.</div>
+        <a href="${url}" target="_blank" rel="noopener"><button class="mini secondary" type="button">View .fzp</button></a>
+      </div>`;
+    }).join("");
+    setStatus(`Found ${scored.length} possibly related existing Fritzing part(s) — check before generating a new one.`, "status-ok");
+  }catch(e){
+    grid.innerHTML = `<div class="compare-card failed"><div class="snippet">Search failed: ${esc(e.message)}. This looks up fritzing.github.io directly from your browser — if your network blocks that domain, this lookup can't run.</div></div>`;
+    setStatus("Existing-parts search failed: "+e.message, "status-err");
+  }
+}
+
 async function compareModels(){
   const key = document.getElementById('apiKey').value.trim();
   const name = document.getElementById('reqName').value.trim();
