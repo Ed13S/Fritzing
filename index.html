@@ -72,10 +72,15 @@
 
   label{font-family:var(--font-mono);font-size:10.5px;color:var(--silk-dim);text-transform:uppercase;
     letter-spacing:.1em;display:flex;align-items:center;gap:6px;margin-top:14px}
-  label .help{cursor:help;color:var(--copper-dim);border:1px solid var(--copper-dim);border-radius:50%;
-    width:13px;height:13px;font-size:9px;display:inline-flex;align-items:center;justify-content:center;
-    text-transform:none;letter-spacing:0;flex:none}
+  label .help{cursor:pointer;color:var(--copper-dim);border:1px solid var(--copper-dim);border-radius:50%;
+    width:15px;height:15px;font-size:9.5px;display:inline-flex;align-items:center;justify-content:center;
+    text-transform:none;letter-spacing:0;flex:none;position:relative;font-weight:700}
   label .help:hover{color:var(--copper-bright);border-color:var(--copper-bright)}
+  .help-popover{position:absolute;top:130%;left:0;background:#0d0808;color:var(--silk);border:1px solid var(--copper);
+    border-radius:6px;padding:9px 11px;font-size:11.5px;line-height:1.5;width:230px;z-index:20;
+    box-shadow:0 8px 20px -6px rgba(0,0,0,.7);text-transform:none;letter-spacing:0;font-weight:400;
+    display:none;white-space:normal}
+  .help-popover.open{display:block}
   input,textarea,select{width:100%;background:#0d0808;color:var(--silk);border:1px solid var(--trace-dim);
     border-radius:5px;padding:10px 11px;margin-top:5px;font-family:var(--font-mono);font-size:13.5px;
     transition:border-color .15s, box-shadow .15s;}
@@ -138,7 +143,7 @@
   .log-line.status-ok{color:var(--led-ok)} .log-line.status-err{color:var(--led-err)}
   .pinsearch{margin-top:8px}
 
-  .svg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px;margin-top:10px}
+  .svg-grid{display:grid;grid-template-columns:1fr;gap:22px;margin-top:10px;max-width:640px}
   .svg-box{background:#0d0808;border:1px solid var(--trace-dim);border-radius:8px;padding:14px;text-align:center;position:relative}
   .svg-box .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
   .svg-box h4{margin:0;color:var(--silk-dim);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
@@ -153,11 +158,12 @@
   .stage.icon{aspect-ratio:1/1} .stage.breadboard{aspect-ratio:1/1}
   .stage.schematic{aspect-ratio:320/260} .stage.pcb{aspect-ratio:380/260}
   .stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;padding:8px}
+  .stage{isolation:isolate}
   .stage.show-grid::before{
-    content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
+    content:"";position:absolute;inset:0;pointer-events:none;z-index:5;
     background-image:
-      repeating-linear-gradient(0deg, rgba(162,20,31,.18) 0 1px, transparent 1px 5%),
-      repeating-linear-gradient(90deg, rgba(162,20,31,.18) 0 1px, transparent 1px 5%);
+      repeating-linear-gradient(0deg, rgba(0,190,255,.55) 0 1.5px, transparent 1.5px 5%),
+      repeating-linear-gradient(90deg, rgba(0,190,255,.55) 0 1.5px, transparent 1.5px 5%);
   }
   .stage .placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#b3987f;font-size:11px;text-align:center;padding:14px}
   .pindot{position:absolute;width:12px;height:12px;border-radius:50%;background:rgba(226,39,58,.5);
@@ -273,7 +279,7 @@
 <div style="height:14px"></div>
 
 <div class="panel">
-  <label>OpenRouter API Key <span class="help" title="Your OpenRouter.ai API key. Used only in your browser to call the model directly.">?</span></label>
+  <label>OpenRouter API Key <span class="help" data-help="Your OpenRouter.ai API key. Used only in your browser to call the model directly." onclick="toggleHelp(this)">?</span></label>
   <div class="pwrow">
     <input type="password" id="apiKey" placeholder="sk-or-v1-..." oninput="onKeyInput()">
     <button type="button" class="pwtoggle" onclick="togglePw()">SHOW</button>
@@ -286,7 +292,7 @@
 
   <div class="row">
     <div>
-      <label>Model <span class="help" title="Which model on OpenRouter generates specs, pins and artwork.">?</span></label>
+      <label>Model <span class="help" data-help="Which model on OpenRouter generates specs, pins and artwork." onclick="toggleHelp(this)">?</span></label>
       <select id="model">
         <option value="__auto_free">Auto (Free model)</option>
         <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
@@ -299,7 +305,7 @@
       <input type="text" id="modelCustom" placeholder="provider/model-id" style="display:none;margin-top:8px">
     </div>
     <div>
-      <label>Package format <span class="help" title=".fzpz is the native Fritzing import format (a renamed zip).">?</span></label>
+      <label>Package format <span class="help" data-help=".fzpz is the native Fritzing import format (a renamed zip)." onclick="toggleHelp(this)">?</span></label>
       <select id="pkgFormat">
         <option value="fzpz">.fzpz (Fritzing part bundle)</option>
         <option value="zip">.zip (fzp + svgs, plain)</option>
@@ -358,8 +364,8 @@
     <div><label>Author</label><input id="fAuthor" value="Custom"></div>
   </div>
   <div class="row">
-    <div><label>Family <span class="help" title="Fritzing groups parts by family — used for swapping between variants.">?</span></label><input id="fFamily" oninput="refreshCard()"></div>
-    <div><label>Package <span class="help" title="Physical mounting style, e.g. THT (through-hole) or SMD (surface-mount).">?</span></label><input id="fPackage" oninput="refreshCard()"></div>
+    <div><label>Family <span class="help" data-help="Fritzing groups parts by family — used for swapping between variants." onclick="toggleHelp(this)">?</span></label><input id="fFamily" oninput="refreshCard()"></div>
+    <div><label>Package <span class="help" data-help="Physical mounting style, e.g. THT (through-hole) or SMD (surface-mount)." onclick="toggleHelp(this)">?</span></label><input id="fPackage" oninput="refreshCard()"></div>
   </div>
   <label>Description</label>
   <textarea id="fDesc" rows="2" oninput="refreshCard()"></textarea>
@@ -388,7 +394,7 @@
   <div class="svg-grid" id="svgGrid"><div class="empty-hint">No views yet — click <b>② Generate Files</b> above, or generate/upload artwork per view once this section is populated.</div></div>
   <input type="file" id="bgUpload" accept="image/*,.svg">
 
-  <h3>AI Edit <span class="help" title="Describe a change in plain English and the model will apply it — to the metadata/pins, or to a specific view's artwork.">?</span></h3>
+  <h3>AI Edit <span class="help" data-help="Describe a change in plain English and the model will apply it — to the metadata/pins, or to a specific view's artwork." onclick="toggleHelp(this)">?</span></h3>
   <div class="row">
     <div style="flex:2">
       <label>What should change?</label>
@@ -543,6 +549,17 @@ function getModel(){
   if(sel === '__custom') return document.getElementById('modelCustom').value.trim() || 'anthropic/claude-3.5-sonnet';
   if(sel === '__auto_free') return '__auto_free';
   return sel;
+}
+function toggleHelp(el){
+  const already = el.querySelector('.help-popover');
+  document.querySelectorAll('.help-popover').forEach(p=>{ if(p !== already) p.remove(); });
+  if(already){ already.remove(); return; }
+  const pop = document.createElement('span');
+  pop.className = "help-popover open";
+  pop.textContent = el.getAttribute('data-help') || "";
+  el.appendChild(pop);
+  const closeOnOutside = (e)=>{ if(!el.contains(e.target)){ pop.remove(); document.removeEventListener('click', closeOnOutside); } };
+  setTimeout(()=> document.addEventListener('click', closeOnOutside), 0);
 }
 function togglePw(){
   const el = document.getElementById('apiKey');
@@ -897,7 +914,7 @@ function buildFzpXml(){
       <views>
         <breadboardView><p layer="breadboard" svgId="${pinId}pin"/></breadboardView>
         <schematicView><p layer="schematic" svgId="${pinId}pin"/></schematicView>
-        <pcbView><p layer="copper0" svgId="${pinId}pad"/><p layer="copper1" svgId="${pinId}pad"/></pcbView>
+        <pcbView><p layer="copper0" svgId="${pinId}pin"/><p layer="copper1" svgId="${pinId}pin"/></pcbView>
       </views>
     </connector>`;
   }).join("\n");
@@ -956,7 +973,7 @@ function composeExportSvg(view){
     }
     circles = state.pins.map((p,i)=>{
       const pos = (state.pinPos[view] && state.pinPos[view][i]) || {x:.5,y:.5};
-      const id = view==='pcb' ? `connector${i}pad` : `connector${i}pin`;
+      const id = `connector${i}pin`;
       return `<circle id="${id}" cx="${(pos.x*w).toFixed(1)}" cy="${(pos.y*h).toFixed(1)}" r="4.5" fill="#2a2a2a" stroke="#fff" stroke-width="0.8"/>`;
     }).join("");
   }
@@ -1222,7 +1239,7 @@ function renderSvgGrid(){
       <div class="actions" style="margin-top:10px">
         <button class="mini secondary" onclick="event.stopPropagation();regenerateView('${view}')">Generate (AI)</button>
         <button class="mini secondary" onclick="event.stopPropagation();triggerUpload('${view}')">Upload Image</button>
-        ${view!=='icon' ? `<button class="mini secondary" onclick="event.stopPropagation();resetLayout('${view}')">Reset Pin Layout</button>` : ""}
+        ${view!=='icon' ? `<button class="mini secondary" onclick="event.stopPropagation();resetLayout('${view}')">↺ Auto-Place Pins</button>` : ""}
       </div>`;
     grid.appendChild(box);
   }
