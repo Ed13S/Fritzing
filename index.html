@@ -19,7 +19,7 @@
   }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
-  body{font-family:var(--font-mono);max-width:1080px;margin:0 auto;padding:32px 18px 70px;color:var(--silk);
+  body{font-family:var(--font-mono);max-width:1320px;margin:0 auto;padding:32px 18px 70px;color:var(--silk);
     background-color:var(--board);
     background-image:radial-gradient(circle at 1px 1px, rgba(217,138,75,.07) 1px, transparent 1.6px);
     background-size:26px 26px;position:relative;}
@@ -143,7 +143,7 @@
   .log-line.status-ok{color:var(--led-ok)} .log-line.status-err{color:var(--led-err)}
   .pinsearch{margin-top:8px}
 
-  .svg-grid{display:grid;grid-template-columns:1fr;gap:22px;margin-top:10px;max-width:640px}
+  .svg-grid{display:grid;grid-template-columns:1fr;gap:22px;margin-top:10px}
   .svg-box{background:#0d0808;border:1px solid var(--trace-dim);border-radius:8px;padding:14px;text-align:center;position:relative}
   .svg-box .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
   .svg-box h4{margin:0;color:var(--silk-dim);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
@@ -153,7 +153,7 @@
   .led-err{background:rgba(255,90,90,.1);color:var(--led-err)} .led-err::before{background:var(--led-err);box-shadow:0 0 6px var(--led-err)}
   .led-unk{background:rgba(184,154,143,.08);color:var(--silk-dim)} .led-unk::before{background:var(--silk-dim)}
 
-  .stage{position:relative;background:#fdfaf5;border-radius:6px;overflow:hidden;min-height:220px;
+  .stage{position:relative;background:#fdfaf5;border-radius:6px;overflow:hidden;min-height:440px;max-height:640px;
     box-shadow:inset 0 0 0 6px #eee2d0, inset 0 0 0 7px #c9a876;touch-action:none}
   .stage.icon{aspect-ratio:1/1} .stage.breadboard{aspect-ratio:1/1}
   .stage.schematic{aspect-ratio:320/260} .stage.pcb{aspect-ratio:380/260}
@@ -294,8 +294,7 @@
     <div>
       <label>Model <span class="help" data-help="Which model on OpenRouter generates specs, pins and artwork." onclick="toggleHelp(this)">?</span></label>
       <select id="model">
-        <option value="openrouter/free">Auto (Free model)</option>
-        <option value="openrouter/auto">Auto (Paid model)</option>
+        <option value="__auto_free">Auto (Free model)</option>
         <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
         <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku (fast)</option>
         <option value="openai/gpt-4o">GPT-4o</option>
@@ -844,6 +843,7 @@ Propose the most typical, realistic pinout for this kind of component.`;
 function useComparisonResult(idx){
   const obj = window.__compareResults[idx];
   if(!obj) return;
+  state.moduleId = null;
   populateFieldsFromSpec(obj, obj.title, obj.family);
   document.getElementById('compareGrid').style.display = 'none';
   state.bg = {icon:null,breadboard:null,schematic:null,pcb:null};
@@ -880,6 +880,7 @@ Propose the most typical, realistic pinout for this kind of component.`;
     try{ obj = JSON.parse(raw); }
     catch(parseErr){ throw new Error("Model didn't return valid JSON (try a different model). Raw response: " + raw.slice(0,200)); }
     populateFieldsFromSpec(obj, name, type);
+    state.moduleId = null;
     state.bg = {icon:null,breadboard:null,schematic:null,pcb:null};
     state.svgs = {icon:"",breadboard:"",schematic:"",pcb:""};
     document.getElementById('svgGrid').innerHTML = '<div class="empty-hint">No views yet — click <b>② Generate Files</b> above, or generate/upload artwork per view once this section is populated.</div>';
@@ -950,6 +951,16 @@ function removePin(i){
 }
 
 /* ---------- Deterministic .fzp builder ---------- */
+function extractModuleId(xml){
+  const m = (xml||"").match(/moduleId="([^"]+)"/);
+  return m ? m[1] : null;
+}
+function ensureModuleId(title){
+  if(!state.moduleId){
+    state.moduleId = "UserPart_" + (title||"part").replace(/[^a-zA-Z0-9]+/g,"_") + "_" + Date.now();
+  }
+  return state.moduleId;
+}
 function buildFzpXml(){
   const title = document.getElementById('fTitle').value || "Custom Part";
   const author = document.getElementById('fAuthor').value || "Custom";
@@ -957,7 +968,7 @@ function buildFzpXml(){
   const family = document.getElementById('fFamily').value || "generic";
   const pkg = document.getElementById('fPackage').value || "THT";
   const tags = document.getElementById('fTags').value.split(",").map(t=>t.trim()).filter(Boolean);
-  const moduleId = "UserPart_" + title.replace(/[^a-zA-Z0-9]+/g,"_") + "_" + Date.now();
+  const moduleId = ensureModuleId(title);
 
   const connectors = state.pins.map((p,i)=>{
     const pinId = "connector"+i;
@@ -987,10 +998,10 @@ ${tags.map(t=>`    <tag>${esc(t)}</tag>`).join("\n")}
   </properties>
   <description>${esc(desc)}</description>
   <views>
-    <iconView><layers image="icon/icon.svg"><layer layerId="icon"/></layers></iconView>
-    <breadboardView><layers image="breadboard/breadboard.svg"><layer layerId="breadboard"/></layers></breadboardView>
-    <schematicView><layers image="schematic/schematic.svg"><layer layerId="schematic"/></layers></schematicView>
-    <pcbView><layers image="pcb/pcb.svg"><layer layerId="copper0"/><layer layerId="copper1"/></layers></pcbView>
+    <iconView><layers image="svg.icon.${moduleId}_icon.svg"><layer layerId="icon"/></layers></iconView>
+    <breadboardView><layers image="svg.breadboard.${moduleId}_breadboard.svg"><layer layerId="breadboard"/></layers></breadboardView>
+    <schematicView><layers image="svg.schematic.${moduleId}_schematic.svg"><layer layerId="schematic"/></layers></schematicView>
+    <pcbView><layers image="svg.pcb.${moduleId}_pcb.svg"><layer layerId="copper0"/><layer layerId="copper1"/></layers></pcbView>
   </views>
   <connectors>
 ${connectors}
@@ -1070,6 +1081,7 @@ function renderStage(view){
       line.setAttribute("x1", cx); line.setAttribute("y1", cy);
       line.setAttribute("x2", x2); line.setAttribute("y2", cy);
       line.setAttribute("stroke", "#1a1a1a"); line.setAttribute("stroke-width", "0.8");
+      line.setAttribute("data-lead", i);
       overlay.appendChild(line);
     });
     holder.appendChild(overlay);
@@ -1091,18 +1103,31 @@ function startDrag(view, idx, ev){
   ev.preventDefault(); ev.stopPropagation();
   const stage = document.getElementById('stageHolder-'+view);
   const rect = stage.getBoundingClientRect();
+  const dotEl = ev.currentTarget;
+  const leadEl = stage.querySelector(`[data-lead="${idx}"]`);
   const snap = ()=> document.getElementById('snapGrid').checked;
   const GRID = 0.05;
-  function onMove(e){
-    let x = (e.clientX - rect.left) / rect.width;
-    let y = (e.clientY - rect.top) / rect.height;
+  function apply(clientX, clientY){
+    let x = (clientX - rect.left) / rect.width;
+    let y = (clientY - rect.top) / rect.height;
     x = Math.min(1, Math.max(0, x)); y = Math.min(1, Math.max(0, y));
     if(snap()){ x = Math.round(x/GRID)*GRID; y = Math.round(y/GRID)*GRID; }
     state.pinPos[view][idx] = {x,y};
-    renderStage(view);
+    dotEl.style.left = (x*100)+"%";
+    dotEl.style.top = (y*100)+"%";
+    if(leadEl){
+      const cx = x*100, cy = y*100;
+      const x2 = cx + 7*(x < 0.5 ? 1 : -1);
+      leadEl.setAttribute("x1", cx); leadEl.setAttribute("y1", cy);
+      leadEl.setAttribute("x2", x2); leadEl.setAttribute("y2", cy);
+    }
+  }
+  function onMove(e){ apply(e.clientX, e.clientY); }
+  function onUp(){
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
     refreshComposedSvg(view);
   }
-  function onUp(){ document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp); }
   document.addEventListener('pointermove', onMove);
   document.addEventListener('pointerup', onUp);
 }
@@ -1111,7 +1136,7 @@ function resetLayout(view){
   state.pinPos[view] = state.pins.map((p,i)=> defaults[i] || {x:.5,y:.5});
   renderStage(view);
   refreshComposedSvg(view);
-  setStatus(`${view} pin layout reset to default.`, "status-ok");
+  setStatus(`${view} pins auto-placed in a default left/right layout — drag any that need fine-tuning onto the real artwork.`, "status-ok");
 }
 let uploadTargetView = null;
 document.getElementById('bgUpload').addEventListener('change', function(){
@@ -1258,6 +1283,7 @@ async function generatePart(){
   if(!key){ markFieldError('apiKey', true); setStatus("Enter your OpenRouter API key.", "status-err"); return; }
 
   if(document.getElementById('editPanel').style.display === 'none'){
+    state.moduleId = null;
     populateFieldsFromSpec({ title: document.getElementById('reqName').value, description: document.getElementById('reqNotes').value, family: document.getElementById('reqType').value, tags:[], pins:[] });
   }
   if(!document.getElementById('fTitle').value.trim()){ markFieldError('reqName', true); setStatus("Enter a part name first.", "status-err"); return; }
@@ -1343,16 +1369,20 @@ function copyXml(){
 
 /* ---------- Export ---------- */
 async function buildFzpzBlob(fzpXml, svgs, fmt){
+  const moduleId = extractModuleId(fzpXml) || "part";
   const zip = new JSZip();
   zip.file("part.fzp", fzpXml);
-  zip.file("icon/icon.svg", svgs.icon || "<svg></svg>");
-  zip.file("breadboard/breadboard.svg", svgs.breadboard || "<svg></svg>");
-  zip.file("schematic/schematic.svg", svgs.schematic || "<svg></svg>");
-  zip.file("pcb/pcb.svg", svgs.pcb || "<svg></svg>");
+  zip.file(`svg.icon.${moduleId}_icon.svg`, svgs.icon || "<svg></svg>");
+  zip.file(`svg.breadboard.${moduleId}_breadboard.svg`, svgs.breadboard || "<svg></svg>");
+  zip.file(`svg.schematic.${moduleId}_schematic.svg`, svgs.schematic || "<svg></svg>");
+  zip.file(`svg.pcb.${moduleId}_pcb.svg`, svgs.pcb || "<svg></svg>");
   return zip.generateAsync({type:"blob"});
 }
-async function verifyFzpzBlob(blob){
-  const expected = ["part.fzp", "icon/icon.svg", "breadboard/breadboard.svg", "schematic/schematic.svg", "pcb/pcb.svg"];
+async function verifyFzpzBlob(blob, fzpXml){
+  const moduleId = extractModuleId(fzpXml) || "part";
+  const expected = ["part.fzp",
+    `svg.icon.${moduleId}_icon.svg`, `svg.breadboard.${moduleId}_breadboard.svg`,
+    `svg.schematic.${moduleId}_schematic.svg`, `svg.pcb.${moduleId}_pcb.svg`];
   const reloaded = await JSZip.loadAsync(blob);
   const actualPaths = Object.keys(reloaded.files).filter(p => !reloaded.files[p].dir);
   const missing = expected.filter(p => !actualPaths.includes(p));
@@ -1368,7 +1398,7 @@ async function packageAndDownload(){
 
   if(fmt === 'fzpz'){
     setStatus("Verifying package contents...", "status-busy", true);
-    const check = await verifyFzpzBlob(blob);
+    const check = await verifyFzpzBlob(blob, fzpXml);
     if(!check.ok){
       setStatus(`Packaging problem detected — missing from the built file: ${check.missing.join(", ")}. Download blocked so you don't get a broken .fzpz. Actual contents: ${check.actualPaths.join(", ")}. Try Validate All, then Download again.`, "status-err");
       return;
@@ -1438,6 +1468,7 @@ function loadFromLibrary(i){
   if(!entry) return;
   const fields = fzpXmlToFields(entry.fzpXml);
   applyImportedFields(fields);
+  state.moduleId = extractModuleId(entry.fzpXml);
   state.bg = {...entry.bg};
   state.pinPos = JSON.parse(JSON.stringify(entry.pinPos));
   state.pins = JSON.parse(JSON.stringify(entry.pins));
@@ -1459,7 +1490,7 @@ async function exportLibraryBundle(){
   const problems = [];
   for(const entry of library){
     const blob = await buildFzpzBlob(entry.fzpXml, entry.svgs, "fzpz");
-    const check = await verifyFzpzBlob(blob);
+    const check = await verifyFzpzBlob(blob, entry.fzpXml);
     if(!check.ok) problems.push(`${entry.title}: missing ${check.missing.join(", ")}`);
     bundle.file(sanitizeFilename(entry.title) + ".fzpz", blob);
   }
@@ -1571,6 +1602,7 @@ async function importPartFile(file){
       if(!fzpEntry) throw new Error("No .fzp found inside the archive.");
       const xml = await fzpEntry.async("text");
       applyImportedFields(fzpXmlToFields(xml));
+      state.moduleId = extractModuleId(xml);
       document.getElementById('fzpXml').value = xml;
       for(const view of VIEWS){
         let svgEntry = null;
@@ -1584,6 +1616,7 @@ async function importPartFile(file){
     } else {
       const xml = await file.text();
       applyImportedFields(fzpXmlToFields(xml));
+      state.moduleId = extractModuleId(xml);
       document.getElementById('fzpXml').value = xml;
       document.getElementById('svgGrid').innerHTML = '<div class="empty-hint">No embedded artwork found in a plain .fzp — click Generate Files, or Generate/Upload per view once populated.</div>';
       setStep(2);
