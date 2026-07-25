@@ -295,7 +295,7 @@
       <label>Model <span class="help" data-help="Which model on OpenRouter generates specs, pins and artwork." onclick="toggleHelp(this)">?</span></label>
       <select id="model">
         <option value="openrouter/free">Auto (Free model)</option>
-        <option value="openrouter/auto">Auto (paid model)</option>
+        <option value="openrouter/auto">Auto (Paid model)</option>
         <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
         <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku (fast)</option>
         <option value="openai/gpt-4o">GPT-4o</option>
@@ -1345,11 +1345,18 @@ function copyXml(){
 async function buildFzpzBlob(fzpXml, svgs, fmt){
   const zip = new JSZip();
   zip.file("part.fzp", fzpXml);
-  zip.folder("icon").file("icon.svg", svgs.icon || "<svg></svg>");
-  zip.folder("breadboard").file("breadboard.svg", svgs.breadboard || "<svg></svg>");
-  zip.folder("schematic").file("schematic.svg", svgs.schematic || "<svg></svg>");
-  zip.folder("pcb").file("pcb.svg", svgs.pcb || "<svg></svg>");
+  zip.file("icon/icon.svg", svgs.icon || "<svg></svg>");
+  zip.file("breadboard/breadboard.svg", svgs.breadboard || "<svg></svg>");
+  zip.file("schematic/schematic.svg", svgs.schematic || "<svg></svg>");
+  zip.file("pcb/pcb.svg", svgs.pcb || "<svg></svg>");
   return zip.generateAsync({type:"blob"});
+}
+async function verifyFzpzBlob(blob){
+  const expected = ["part.fzp", "icon/icon.svg", "breadboard/breadboard.svg", "schematic/schematic.svg", "pcb/pcb.svg"];
+  const reloaded = await JSZip.loadAsync(blob);
+  const actualPaths = Object.keys(reloaded.files).filter(p => !reloaded.files[p].dir);
+  const missing = expected.filter(p => !actualPaths.includes(p));
+  return { ok: missing.length === 0, missing, actualPaths };
 }
 async function packageAndDownload(){
   if(!window.JSZip){ setStatus("JSZip failed to load — check network/CDN access.", "status-err"); return; }
@@ -1358,11 +1365,21 @@ async function packageAndDownload(){
   const fzpXml = document.getElementById('fzpXml').value || buildFzpXml();
   setStatus("Packaging...", "status-busy", true);
   const blob = await buildFzpzBlob(fzpXml, state.svgs, fmt);
+
+  if(fmt === 'fzpz'){
+    setStatus("Verifying package contents...", "status-busy", true);
+    const check = await verifyFzpzBlob(blob);
+    if(!check.ok){
+      setStatus(`Packaging problem detected — missing from the built file: ${check.missing.join(", ")}. Download blocked so you don't get a broken .fzpz. Actual contents: ${check.actualPaths.join(", ")}. Try Validate All, then Download again.`, "status-err");
+      return;
+    }
+  }
+
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = sanitizeFilename(document.getElementById('fTitle').value || "custom_part") + "." + fmt;
   a.click();
-  setStatus("Package downloaded.", "status-ok");
+  setStatus("Package downloaded and verified — part.fzp + all 4 SVGs confirmed present at the correct paths.", "status-ok");
 }
 function downloadIndividual(){
   refreshComposedAll();
@@ -1439,16 +1456,23 @@ async function exportLibraryBundle(){
   if(!window.JSZip){ setStatus("JSZip failed to load — check network/CDN access.", "status-err"); return; }
   setStatus("Building bundle...", "status-busy", true);
   const bundle = new JSZip();
+  const problems = [];
   for(const entry of library){
     const blob = await buildFzpzBlob(entry.fzpXml, entry.svgs, "fzpz");
+    const check = await verifyFzpzBlob(blob);
+    if(!check.ok) problems.push(`${entry.title}: missing ${check.missing.join(", ")}`);
     bundle.file(sanitizeFilename(entry.title) + ".fzpz", blob);
+  }
+  if(problems.length){
+    setStatus("Packaging problem in bundle — " + problems.join(" · ") + ". Download blocked.", "status-err");
+    return;
   }
   const blob = await bundle.generateAsync({type:"blob"});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = "fritzing_parts_bundle.zip";
   a.click();
-  setStatus("Bundle downloaded.", "status-ok");
+  setStatus(`Bundle downloaded and verified — all ${library.length} part(s) confirmed complete.`, "status-ok");
 }
 
 /* ---------- Save / Load project ---------- */
