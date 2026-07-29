@@ -294,8 +294,7 @@
     <div>
       <label>Model <span class="help" data-help="Which model on OpenRouter generates specs, pins and artwork." onclick="toggleHelp(this)">?</span></label>
       <select id="model">
-        <option value="openrouter/free">Auto (Free model)</option>
-        <option value="openrouter/auto">Auto (Paid model)</option>
+        <option value="__auto_free">Auto (Free model)</option>
         <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
         <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku (fast)</option>
         <option value="openai/gpt-4o">GPT-4o</option>
@@ -970,26 +969,28 @@ function buildFzpXml(){
   const pkg = document.getElementById('fPackage').value || "THT";
   const tags = document.getElementById('fTags').value.split(",").map(t=>t.trim()).filter(Boolean);
   const moduleId = ensureModuleId(title);
+  const slug = title.replace(/[^a-zA-Z0-9]+/g,"_");
 
   const connectors = state.pins.map((p,i)=>{
     const pinId = "connector"+i;
     return `    <connector id="${pinId}" name="${esc(p.name)}" type="${p.type}">
       <description>${esc(p.desc||p.name)}</description>
       <views>
-        <breadboardView><p layer="breadboard" svgId="${pinId}pin"/></breadboardView>
-        <schematicView><p layer="schematic" svgId="${pinId}pin"/></schematicView>
-        <pcbView><p layer="copper0" svgId="${pinId}pin"/><p layer="copper1" svgId="${pinId}pin"/></pcbView>
+        <breadboardView><p layer="breadboard" svgId="${pinId}pin" terminalId="${pinId}terminal"/></breadboardView>
+        <schematicView><p layer="schematic" svgId="${pinId}pin" terminalId="${pinId}terminal"/></schematicView>
+        <pcbView><p layer="copper0" svgId="${pinId}pad"/><p layer="copper1" svgId="${pinId}pad"/></pcbView>
       </views>
     </connector>`;
   }).join("\n");
 
   return `<?xml version='1.0' encoding='UTF-8'?>
-<module fritzingVersion="0.9.3b" moduleId="${moduleId}">
+<module fritzingVersion="0.9.3b" moduleId="${moduleId}" referenceFile="${moduleId}.fzp">
   <version>1</version>
   <author>${esc(author)}</author>
   <title>${esc(title)}</title>
   <label>${esc(title)}</label>
   <date>${new Date().toISOString().slice(0,10)}</date>
+  <url></url>
   <tags>
 ${tags.map(t=>`    <tag>${esc(t)}</tag>`).join("\n")}
   </tags>
@@ -999,10 +1000,10 @@ ${tags.map(t=>`    <tag>${esc(t)}</tag>`).join("\n")}
   </properties>
   <description>${esc(desc)}</description>
   <views>
-    <iconView><layers image="svg.icon.${moduleId}_icon.svg"><layer layerId="icon"/></layers></iconView>
-    <breadboardView><layers image="svg.breadboard.${moduleId}_breadboard.svg"><layer layerId="breadboard"/></layers></breadboardView>
-    <schematicView><layers image="svg.schematic.${moduleId}_schematic.svg"><layer layerId="schematic"/></layers></schematicView>
-    <pcbView><layers image="svg.pcb.${moduleId}_pcb.svg"><layer layerId="copper0"/><layer layerId="copper1"/></layers></pcbView>
+    <iconView><layers image="icon/${slug}_icon.svg"><layer layerId="icon"/></layers></iconView>
+    <breadboardView><layers image="breadboard/${slug}_breadboard.svg"><layer layerId="breadboard"/></layers></breadboardView>
+    <schematicView><layers image="schematic/${slug}_schematic.svg"><layer layerId="schematic"/></layers></schematicView>
+    <pcbView><layers image="pcb/${slug}_pcb.svg"><layer layerId="copper0"/><layer layerId="copper1"/><layer layerId="silkscreen"/></layers></pcbView>
   </views>
   <connectors>
 ${connectors}
@@ -1022,9 +1023,26 @@ function composeExportSvg(view){
     const [w,h] = STAGE_DIM[view];
     let bgTag = "";
     if(state.bg[view]) bgTag = `<image xlink:href="${state.bg[view]}" href="${state.bg[view]}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
-  let circles = "";
-  let leads = "";
-  if(view !== 'icon'){
+    const svgOpen = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">`;
+
+    if(view === 'icon'){
+      return `${svgOpen}<g id="icon">${bgTag}</g></svg>`;
+    }
+
+    if(view === 'pcb'){
+      // PCB connectors use the connectorNpad convention (not pin), per Fritzing spec.
+      const pads = state.pins.map((p,i)=>{
+        const pos = (state.pinPos[view] && state.pinPos[view][i]) || {x:.5,y:.5};
+        return `<circle id="connector${i}pad" cx="${(pos.x*w).toFixed(1)}" cy="${(pos.y*h).toFixed(1)}" r="4.5" fill="#c9a876" stroke="none"/>`;
+      }).join("");
+      // copper0 (bottom) encloses copper1 (top), matching the worked example in the spec.
+      const copper = `<g id="copper0"><g id="copper1">${pads}</g></g>`;
+      const silk = `<g id="silkscreen">${bgTag}</g>`;
+      return `${svgOpen}${copper}${silk}</svg>`;
+    }
+
+    // breadboard / schematic: connectorNpin (visible shape) + connectorNterminal (exact snap anchor)
+    let leads = "";
     if(view === 'schematic'){
       leads = state.pins.map((p,i)=>{
         const pos = (state.pinPos[view] && state.pinPos[view][i]) || {x:.5,y:.5};
@@ -1035,13 +1053,14 @@ function composeExportSvg(view){
         return `<line x1="${cx.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="#1a1a1a" stroke-width="1.6"/>`;
       }).join("");
     }
-    circles = state.pins.map((p,i)=>{
+    const pins = state.pins.map((p,i)=>{
       const pos = (state.pinPos[view] && state.pinPos[view][i]) || {x:.5,y:.5};
-      const id = `connector${i}pin`;
-      return `<circle id="${id}" cx="${(pos.x*w).toFixed(1)}" cy="${(pos.y*h).toFixed(1)}" r="4.5" fill="#2a2a2a" stroke="#fff" stroke-width="0.8"/>`;
+      const cx = (pos.x*w).toFixed(1), cy = (pos.y*h).toFixed(1);
+      return `<circle id="connector${i}pin" cx="${cx}" cy="${cy}" r="4.5" fill="#2a2a2a" stroke="#fff" stroke-width="0.8"/>` +
+             `<circle id="connector${i}terminal" cx="${cx}" cy="${cy}" r="0.6" fill="none" stroke="none"/>`;
     }).join("");
-  }
-  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${bgTag}${leads}${circles}</svg>`;
+    const groupId = view === 'breadboard' ? 'breadboard' : 'schematic';
+    return `${svgOpen}<g id="${groupId}">${bgTag}${leads}${pins}</g></svg>`;
   }catch(e){
     console.error("composeExportSvg failed for view", view, e);
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"></svg>`;
@@ -1369,25 +1388,35 @@ function copyXml(){
 }
 
 /* ---------- Export ---------- */
+function extractImagePaths(xml){
+  const get = (tag) => {
+    const m = xml.match(new RegExp(`<${tag}>\\s*<layers image="([^"]+)"`));
+    return m ? m[1] : null;
+  };
+  return {
+    icon: get("iconView"),
+    breadboard: get("breadboardView"),
+    schematic: get("schematicView"),
+    pcb: get("pcbView")
+  };
+}
 async function buildFzpzBlob(fzpXml, svgs, fmt){
-  const moduleId = extractModuleId(fzpXml) || "part";
+  const paths = extractImagePaths(fzpXml);
   const zip = new JSZip();
   zip.file("part.fzp", fzpXml);
-  zip.file(`svg.icon.${moduleId}_icon.svg`, svgs.icon || "<svg></svg>");
-  zip.file(`svg.breadboard.${moduleId}_breadboard.svg`, svgs.breadboard || "<svg></svg>");
-  zip.file(`svg.schematic.${moduleId}_schematic.svg`, svgs.schematic || "<svg></svg>");
-  zip.file(`svg.pcb.${moduleId}_pcb.svg`, svgs.pcb || "<svg></svg>");
+  zip.file(paths.icon || "icon/icon.svg", svgs.icon || "<svg></svg>");
+  zip.file(paths.breadboard || "breadboard/breadboard.svg", svgs.breadboard || "<svg></svg>");
+  zip.file(paths.schematic || "schematic/schematic.svg", svgs.schematic || "<svg></svg>");
+  zip.file(paths.pcb || "pcb/pcb.svg", svgs.pcb || "<svg></svg>");
   return zip.generateAsync({type:"blob"});
 }
 async function verifyFzpzBlob(blob, fzpXml){
-  const moduleId = extractModuleId(fzpXml) || "part";
-  const expected = ["part.fzp",
-    `svg.icon.${moduleId}_icon.svg`, `svg.breadboard.${moduleId}_breadboard.svg`,
-    `svg.schematic.${moduleId}_schematic.svg`, `svg.pcb.${moduleId}_pcb.svg`];
+  const paths = extractImagePaths(fzpXml);
+  const expected = ["part.fzp", paths.icon, paths.breadboard, paths.schematic, paths.pcb].filter(Boolean);
   const reloaded = await JSZip.loadAsync(blob);
   const actualPaths = Object.keys(reloaded.files).filter(p => !reloaded.files[p].dir);
   const missing = expected.filter(p => !actualPaths.includes(p));
-  return { ok: missing.length === 0, missing, actualPaths };
+  return { ok: missing.length === 0, missing, actualPaths, expected };
 }
 async function packageAndDownload(){
   if(!window.JSZip){ setStatus("JSZip failed to load — check network/CDN access.", "status-err"); return; }
