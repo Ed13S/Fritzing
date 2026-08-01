@@ -1037,7 +1037,7 @@ function composeExportSvg(view){
         return `<circle id="connector${i}pad" cx="${(pos.x*w).toFixed(1)}" cy="${(pos.y*h).toFixed(1)}" r="4.5" fill="#c9a876" stroke="none"/>`;
       }).join("");
       // copper0 (bottom) encloses copper1 (top), matching the worked example in the spec.
-      const copper = `<g id="copper0"><g id="copper1">${pads}</g></g>`;
+      const copper = `<g id="copper1"><g id="copper0">${pads}</g></g>`;
       const silk = `<g id="silkscreen">${bgTag}</g>`;
       return `${svgOpen}${copper}${silk}</svg>`;
     }
@@ -1401,23 +1401,34 @@ function extractImagePaths(xml){
     pcb: get("pcbView")
   };
 }
+function fzpzSvgName(imagePath){
+  // FZP references e.g. breadboard/my_part.svg; FZPZ stores it flat as
+  // svg.breadboard.my_part.svg. Fritzing moves it during import.
+  return "svg." + imagePath.replace(/\//g, ".");
+}
+function fzpzPartName(fzpXml){
+  const title = (fzpXml.match(/<title>([\s\S]*?)<\/title>/)||[,"custom_part"])[1];
+  return "part." + sanitizeFilename(title).replace(/\.[^.]+$/, "") + ".fzp";
+}
 async function buildFzpzBlob(fzpXml, svgs, fmt){
   const paths = extractImagePaths(fzpXml);
   const zip = new JSZip();
-  zip.file("part.fzp", fzpXml);
-  zip.file(paths.icon || "icon/icon.svg", svgs.icon || "<svg></svg>");
-  zip.file(paths.breadboard || "breadboard/breadboard.svg", svgs.breadboard || "<svg></svg>");
-  zip.file(paths.schematic || "schematic/schematic.svg", svgs.schematic || "<svg></svg>");
-  zip.file(paths.pcb || "pcb/pcb.svg", svgs.pcb || "<svg></svg>");
+  zip.file(fzpzPartName(fzpXml), fzpXml);
+  for(const view of ["icon","breadboard","schematic","pcb"]){
+    const imagePath = paths[view];
+    if(!imagePath) throw new Error("Missing " + view + " image path in FZP metadata.");
+    zip.file(fzpzSvgName(imagePath), svgs[view] || "<svg xmlns=\"http://www.w3.org/2000/svg\"/>");
+  }
   return zip.generateAsync({type:"blob"});
 }
 async function verifyFzpzBlob(blob, fzpXml){
   const paths = extractImagePaths(fzpXml);
-  const expected = ["part.fzp", paths.icon, paths.breadboard, paths.schematic, paths.pcb].filter(Boolean);
+  const expected = [fzpzPartName(fzpXml), ...Object.values(paths).filter(Boolean).map(fzpzSvgName)];
   const reloaded = await JSZip.loadAsync(blob);
   const actualPaths = Object.keys(reloaded.files).filter(p => !reloaded.files[p].dir);
   const missing = expected.filter(p => !actualPaths.includes(p));
-  return { ok: missing.length === 0, missing, actualPaths, expected };
+  const nested = actualPaths.filter(p => p.includes("/"));
+  return { ok: missing.length === 0 && nested.length === 0, missing: missing.concat(nested.length ? ["nested paths: "+nested.join(", ")] : []), actualPaths, expected };
 }
 async function packageAndDownload(){
   if(!window.JSZip){ setStatus("JSZip failed to load — check network/CDN access.", "status-err"); return; }
@@ -1440,7 +1451,7 @@ async function packageAndDownload(){
   a.href = URL.createObjectURL(blob);
   a.download = sanitizeFilename(document.getElementById('fTitle').value || "custom_part") + "." + fmt;
   a.click();
-  setStatus("Package downloaded and verified — part.fzp + all 4 SVGs confirmed present at the correct paths.", "status-ok");
+  setStatus("Package downloaded and verified — flat part.<name>.fzp + all 4 flat svg.<view>.<name>.svg files confirmed.", "status-ok");
 }
 function downloadIndividual(){
   refreshComposedAll();
