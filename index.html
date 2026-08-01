@@ -157,7 +157,8 @@
     box-shadow:inset 0 0 0 6px #eee2d0, inset 0 0 0 7px #c9a876;touch-action:none}
   .stage.icon{aspect-ratio:1/1} .stage.breadboard{aspect-ratio:1/1}
   .stage.schematic{aspect-ratio:320/260} .stage.pcb{aspect-ratio:380/260}
-  .stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+  .stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:0}
+  .stage-grid{position:absolute;inset:0;z-index:1;pointer-events:none;background-image:repeating-linear-gradient(0deg,rgba(0,190,255,.62) 0 1px,transparent 1px 5%),repeating-linear-gradient(90deg,rgba(0,190,255,.62) 0 1px,transparent 1px 5%);box-shadow:inset 0 0 0 1px rgba(0,190,255,.4)}
   .stage{isolation:isolate}
   .stage.show-grid::before{
     content:"";position:absolute;inset:0;pointer-events:none;z-index:5;
@@ -390,8 +391,9 @@
   <h3>Generated Views</h3>
   <small class="hint">For each view: generate artwork with the model, or upload your own image/SVG as the background — then drag the red dots onto the matching pins.</small>
   <div class="checkline">
-    <input type="checkbox" id="snapGrid" onchange="renderAllStages()">
-    <label style="margin:0;text-transform:none;letter-spacing:0;font-size:11.5px" for="snapGrid">Snap pins to grid while dragging (evenly spaced 5% increments — useful for header/DIP-style pinouts)</label>
+    <input type="checkbox" id="snapGrid" checked onchange="togglePinGrid()">
+    <label style="margin:0;text-transform:none;letter-spacing:0;font-size:11.5px" for="snapGrid">Show 5% grid and snap pins while dragging</label>
+    <button class="mini secondary" type="button" onclick="autoPlaceAllViews()">↺ Auto-Place All Views</button>
   </div>
   <div class="svg-grid" id="svgGrid"><div class="empty-hint">No views yet — click <b>② Generate Files</b> above, or generate/upload artwork per view once this section is populated.</div></div>
   <input type="file" id="bgUpload" accept="image/*,.svg">
@@ -701,19 +703,39 @@ function sanitizeFilename(name){
 function svgTextToDataUri(svg){ return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg))); }
 
 /* ---------- Pin position defaults + sync ---------- */
-function defaultPositionsForCount(n){
-  const left = Math.ceil(n/2), right = n-left;
-  const out = [];
-  for(let i=0;i<left;i++) out.push({x:0.08, y:(i+1)/(left+1)});
-  for(let i=0;i<right;i++) out.push({x:0.92, y:(i+1)/(right+1)});
+function autoPositionsForView(view, n){
+  if(!n) return [];
+  if(view === "schematic"){
+    const left = Math.ceil(n/2), right = n-left, out=[];
+    for(let i=0;i<left;i++) out.push({x:.06,y:(i+1)/(left+1)});
+    for(let i=0;i<right;i++) out.push({x:.94,y:(i+1)/(right+1)});
+    return out;
+  }
+  // Breadboard and PCB start with a usable all-edge perimeter layout.
+  const sides=[[],[],[],[]];
+  for(let i=0;i<n;i++) sides[i%4].push(i);
+  const out=Array(n);
+  sides[0].forEach((pin,j)=>out[pin]={x:(j+1)/(sides[0].length+1),y:.06});
+  sides[1].forEach((pin,j)=>out[pin]={x:.94,y:(j+1)/(sides[1].length+1)});
+  sides[2].forEach((pin,j)=>out[pin]={x:1-(j+1)/(sides[2].length+1),y:.94});
+  sides[3].forEach((pin,j)=>out[pin]={x:.06,y:1-(j+1)/(sides[3].length+1)});
   return out;
 }
+function defaultPositionsForCount(n){ return autoPositionsForView("schematic",n); }
 function syncPinPositions(){
-  const defaults = defaultPositionsForCount(state.pins.length);
   ["breadboard","schematic","pcb"].forEach(view=>{
+    const defaults = autoPositionsForView(view,state.pins.length);
     const cur = state.pinPos[view] || [];
     state.pinPos[view] = state.pins.map((p,i)=> cur[i] || defaults[i] || {x:.5,y:.5});
   });
+}
+function togglePinGrid(){ renderAllStages(); }
+function autoPlaceAllViews(){
+  ["breadboard","schematic","pcb"].forEach(view=>{
+    state.pinPos[view]=autoPositionsForView(view,state.pins.length);
+    renderStage(view); refreshComposedSvg(view);
+  });
+  setStatus("Pins auto-placed on all views. Drag any pin to fine-tune its position.","status-ok");
 }
 
 /* ---------- Part card live preview ---------- */
@@ -1077,12 +1099,17 @@ function renderStage(view){
   if(!holder) return;
   holder.innerHTML = "";
   const snapOn = document.getElementById('snapGrid') && document.getElementById('snapGrid').checked;
-  holder.classList.toggle('show-grid', !!snapOn && view !== 'icon');
   if(state.bg[view]){
     const img = document.createElement('img');
     img.src = state.bg[view];
     holder.appendChild(img);
-  } else {
+  }
+  if(snapOn && view !== 'icon'){
+    const grid = document.createElement('div');
+    grid.className = 'stage-grid';
+    holder.appendChild(grid);
+  }
+  if(!state.bg[view]){
     const ph = document.createElement('div');
     ph.className = "placeholder";
     ph.textContent = "No artwork yet — Generate or Upload Image";
@@ -1153,7 +1180,7 @@ function startDrag(view, idx, ev){
   document.addEventListener('pointerup', onUp);
 }
 function resetLayout(view){
-  const defaults = defaultPositionsForCount(state.pins.length);
+  const defaults = autoPositionsForView(view,state.pins.length);
   state.pinPos[view] = state.pins.map((p,i)=> defaults[i] || {x:.5,y:.5});
   renderStage(view);
   refreshComposedSvg(view);
@@ -1168,7 +1195,7 @@ document.getElementById('bgUpload').addEventListener('change', function(){
   reader.onload = ()=>{
     state.bg[view] = reader.result;
     if(view !== 'icon'){
-      const defaults = defaultPositionsForCount(state.pins.length);
+      const defaults = autoPositionsForView(view,state.pins.length);
       state.pinPos[view] = state.pins.map((p,i)=> defaults[i] || {x:.5,y:.5});
     }
     renderStage(view);
