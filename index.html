@@ -157,14 +157,13 @@
     box-shadow:inset 0 0 0 6px #eee2d0, inset 0 0 0 7px #c9a876;touch-action:none}
   .stage.icon{aspect-ratio:1/1} .stage.breadboard{aspect-ratio:1/1}
   .stage.schematic{aspect-ratio:320/260} .stage.pcb{aspect-ratio:380/260}
-  .stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:0}
-  .stage-grid{position:absolute;inset:0;z-index:1;pointer-events:none;background-image:repeating-linear-gradient(0deg,rgba(0,190,255,.62) 0 1px,transparent 1px 2.5%),repeating-linear-gradient(90deg,rgba(0,190,255,.62) 0 1px,transparent 1px 2.5%);box-shadow:inset 0 0 0 1px rgba(0,190,255,.4)}
+  .stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
   .stage{isolation:isolate}
   .stage.show-grid::before{
     content:"";position:absolute;inset:0;pointer-events:none;z-index:5;
     background-image:
-      repeating-linear-gradient(0deg, rgba(0,190,255,.55) 0 1.5px, transparent 1.5px 2.5%),
-      repeating-linear-gradient(90deg, rgba(0,190,255,.55) 0 1.5px, transparent 1.5px 2.5%);
+      repeating-linear-gradient(0deg, rgba(0,190,255,.55) 0 1.5px, transparent 1.5px 5%),
+      repeating-linear-gradient(90deg, rgba(0,190,255,.55) 0 1.5px, transparent 1.5px 5%);
   }
   .stage .placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#b3987f;font-size:11px;text-align:center;padding:14px}
   .pindot{position:absolute;width:12px;height:12px;border-radius:50%;background:rgba(226,39,58,.5);
@@ -175,7 +174,7 @@
   .pindot .num{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:8.5px;background:rgba(0,0,0,.75);
     color:#fff;padding:1px 4px;border-radius:3px;white-space:nowrap;opacity:.85;transition:opacity .1s;pointer-events:none}
   .pindot:hover .num{opacity:1;font-size:9.5px}
-  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
   .presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .presets button{background:transparent;color:var(--silk-dim);border:1px dashed var(--trace-dim);box-shadow:none;
     font-family:var(--font-mono);font-weight:500;font-size:11.5px;padding:7px 12px}
@@ -298,7 +297,7 @@
         <option value="openrouter/free">Auto (Free model)</option>
         <option value="openrouter/auto-beta">Auto (Paid model)</option>
         <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
-        <option value="anthropic/claude-3.5-haiku:beta">Claude 3.5 Haiku (fast)</option>
+        <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku (fast)</option>
         <option value="openai/gpt-4o">GPT-4o</option>
         <option value="openai/gpt-4o-mini">GPT-4o Mini (fast)</option>
         <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
@@ -391,9 +390,8 @@
   <h3>Generated Views</h3>
   <small class="hint">For each view: generate artwork with the model, or upload your own image/SVG as the background — then drag the red dots onto the matching pins.</small>
   <div class="checkline">
-    <input type="checkbox" id="snapGrid" checked onchange="togglePinGrid()">
-    <label style="margin:0;text-transform:none;letter-spacing:0;font-size:11.5px" for="snapGrid">Show 2.5% grid and snap pins while dragging</label>
-    <button class="mini secondary" type="button" onclick="autoPlaceAllViews()">↺ Auto-Place All Views</button>
+    <input type="checkbox" id="snapGrid" onchange="renderAllStages()">
+    <label style="margin:0;text-transform:none;letter-spacing:0;font-size:11.5px" for="snapGrid">Snap pins to grid while dragging (evenly spaced 5% increments — useful for header/DIP-style pinouts)</label>
   </div>
   <div class="svg-grid" id="svgGrid"><div class="empty-hint">No views yet — click <b>② Generate Files</b> above, or generate/upload artwork per view once this section is populated.</div></div>
   <input type="file" id="bgUpload" accept="image/*,.svg">
@@ -470,7 +468,6 @@ const STAGE_DIM = { icon:[120,120], breadboard:[320,320], schematic:[320,260], p
 
 let state = { bg:{icon:null,breadboard:null,schematic:null,pcb:null}, pinPos:{breadboard:[],schematic:[],pcb:[]},
   pins:[], svgs:{icon:"",breadboard:"",schematic:"",pcb:""} };
-let snapState = { breadboard: true, schematic: true, pcb: true };
 let dragIdx = null;
 let library = [];
 
@@ -565,6 +562,26 @@ function toggleHelp(el){
   el.appendChild(pop);
   const closeOnOutside = (e)=>{ if(!el.contains(e.target)){ pop.remove(); document.removeEventListener('click', closeOnOutside); } };
   setTimeout(()=> document.addEventListener('click', closeOnOutside), 0);
+}
+function togglePasteSvg(view){
+  const wrap = document.getElementById('pasteSvgWrap-'+view);
+  wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+}
+function applyPastedSvg(view){
+  const text = document.getElementById('pasteSvgInput-'+view).value.trim();
+  if(!text){ setStatus("Paste some SVG markup first.", "status-err"); return; }
+  const doc = new DOMParser().parseFromString(text, "image/svg+xml");
+  if(doc.querySelector('parsererror')){ setStatus("That doesn't look like valid SVG/XML — check for a stray tag or unescaped character.", "status-err"); return; }
+  state.bg[view] = svgTextToDataUri(text);
+  if(view !== 'icon'){
+    const defaults = defaultPositionsForCount(state.pins.length);
+    state.pinPos[view] = state.pins.map((p,i)=> defaults[i] || {x:.5,y:.5});
+  }
+  document.getElementById('pasteSvgWrap-'+view).style.display = 'none';
+  renderStage(view);
+  refreshComposedSvg(view);
+  refreshCard();
+  setStatus(`${view} background set from pasted SVG code${view!=='icon' ? " — pin positions reset to default, drag or AI-Detect to place them" : ""}.`, "status-ok");
 }
 function togglePw(){
   const el = document.getElementById('apiKey');
@@ -686,6 +703,38 @@ async function callModelOnce(sys, user, key, model, _retried){
   recordUsage(sys.length + user.length, content.length);
   return content;
 }
+async function callModelWithImage(sys, textPrompt, imageDataUri, key, model, _retried){
+  let res;
+  const body = {
+    model,
+    messages: [
+      {role:"system", content: sys},
+      {role:"user", content: [
+        {type:"text", text: textPrompt},
+        {type:"image_url", image_url:{url: imageDataUri}}
+      ]}
+    ]
+  };
+  try{
+    res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+key },
+      body: JSON.stringify(body)
+    });
+  }catch(networkErr){
+    if(!_retried){ await new Promise(r=>setTimeout(r,900)); return callModelWithImage(sys,textPrompt,imageDataUri,key,model,true); }
+    throw new Error("Network error reaching OpenRouter: "+networkErr.message);
+  }
+  if(!res.ok){
+    if(res.status >= 500 && !_retried){ await new Promise(r=>setTimeout(r,900)); return callModelWithImage(sys,textPrompt,imageDataUri,key,model,true); }
+    const t = await res.text();
+    throw new Error("HTTP "+res.status+": "+t.slice(0,300)+" — this feature needs a vision-capable model (try GPT-4o or Claude 3.5 Sonnet).");
+  }
+  const data = await res.json();
+  const content = (data.choices?.[0]?.message?.content || "").trim();
+  recordUsage(sys.length + textPrompt.length + 500, content.length);
+  return content;
+}
 let usage = { requests: 0, chars: 0 };
 function recordUsage(inChars, outChars){
   usage.requests += 1;
@@ -704,42 +753,19 @@ function sanitizeFilename(name){
 function svgTextToDataUri(svg){ return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg))); }
 
 /* ---------- Pin position defaults + sync ---------- */
-function autoPositionsForView(view, n){
-  if(!n) return [];
-  if(view === "schematic"){
-    const left = Math.ceil(n/2), right = n-left, out=[];
-    for(let i=0;i<left;i++) out.push({x:.06,y:(i+1)/(left+1)});
-    for(let i=0;i<right;i++) out.push({x:.94,y:(i+1)/(right+1)});
-    return out;
-  }
-  const sides=[[],[],[],[]];
-  for(let i=0;i<n;i++) sides[i%4].push(i);
-  const out=Array(n);
-  sides[0].forEach((pin,j)=>out[pin]={x:(j+1)/(sides[0].length+1),y:.06});
-  sides[1].forEach((pin,j)=>out[pin]={x:.94,y:(j+1)/(sides[1].length+1)});
-  sides[2].forEach((pin,j)=>out[pin]={x:1-(j+1)/(sides[2].length+1),y:.94});
-  sides[3].forEach((pin,j)=>out[pin]={x:.06,y:1-(j+1)/(sides[3].length+1)});
+function defaultPositionsForCount(n){
+  const left = Math.ceil(n/2), right = n-left;
+  const out = [];
+  for(let i=0;i<left;i++) out.push({x:0.08, y:(i+1)/(left+1)});
+  for(let i=0;i<right;i++) out.push({x:0.92, y:(i+1)/(right+1)});
   return out;
 }
-function defaultPositionsForCount(n){ return autoPositionsForView("schematic",n); }
 function syncPinPositions(){
+  const defaults = defaultPositionsForCount(state.pins.length);
   ["breadboard","schematic","pcb"].forEach(view=>{
-    const defaults = autoPositionsForView(view,state.pins.length);
     const cur = state.pinPos[view] || [];
     state.pinPos[view] = state.pins.map((p,i)=> cur[i] || defaults[i] || {x:.5,y:.5});
   });
-}
-function togglePinGrid(){ renderAllStages(); }
-function toggleViewSnap(view, enabled){
-  snapState[view] = enabled;
-  renderStage(view);
-}
-function autoPlaceAllViews(){
-  ["breadboard","schematic","pcb"].forEach(view=>{
-    state.pinPos[view]=autoPositionsForView(view,state.pins.length);
-    renderStage(view); refreshComposedSvg(view);
-  });
-  setStatus("Pins auto-placed on all views. Drag any pin to fine-tune its position.","status-ok");
 }
 
 /* ---------- Part card live preview ---------- */
@@ -763,28 +789,14 @@ function populateFieldsFromSpec(obj, reqName, reqType){
   document.getElementById('fTags').value = (obj.tags || []).join(", ");
   state.pins = (obj.pins && obj.pins.length) ? obj.pins.map(p=>({name:p.name, type:p.type||"male", desc:p.description||""}))
     : [{name:"VCC",type:"male",desc:""},{name:"GND",type:"male",desc:""}];
-
-  // Use AI suggested coordinates if provided by AI, otherwise auto-place
-  ["breadboard","schematic","pcb"].forEach(view=>{
-    if(obj.pins && obj.pins.length){
-      const aiPos = obj.pins.map(p => p.position && p.position[view] && typeof p.position[view].x === 'number' ? {x: Math.min(1, Math.max(0, p.position[view].x)), y: Math.min(1, Math.max(0, p.position[view].y))} : null);
-      if(aiPos.every(p => p !== null)){
-        state.pinPos[view] = aiPos;
-      } else {
-        const defaults = autoPositionsForView(view, state.pins.length);
-        state.pinPos[view] = state.pins.map((p, i) => (aiPos[i] || defaults[i] || {x: .5, y: .5}));
-      }
-    } else {
-      state.pinPos[view] = autoPositionsForView(view, state.pins.length);
-    }
-  });
-
+  syncPinPositions();
   renderPins();
   document.getElementById('editPanel').style.display = 'block';
   refreshCard();
 }
 
-/* ---------- Search Fritzing core parts index ---------- */
+/* ---------- Compare multiple models on the same spec request ---------- */
+/* ---------- Search Fritzing's real core-parts index for existing matches (free, no API key needed) ---------- */
 let __fritzingPartsIndex = null;
 async function loadFritzingPartsIndex(){
   if(__fritzingPartsIndex) return __fritzingPartsIndex;
@@ -853,7 +865,7 @@ async function compareModels(){
   setStatus(`Comparing ${candidates.length} models...`, "status-busy", true);
   const sys = `You suggest Fritzing part specs. Respond ONLY with raw JSON (no markdown) with keys:
 title, description, family, package (THT/SMD/etc), tags (array of strings),
-pins (array of {name, type, description, position: {breadboard: {x, y}, schematic: {x, y}, pcb: {x, y}}}) where type is one of male/female/pad, and position contains normalized coordinates (x: 0.0 to 1.0, y: 0.0 to 1.0) where you think pins should be on the grid.
+pins (array of {name, type, description}) where type is one of male/female/pad.
 Propose the most typical, realistic pinout for this kind of component.`;
   const userMsg = `Name: ${name}\nType: ${type}\nNotes: ${notes}`;
 
@@ -911,10 +923,10 @@ async function suggestSpecs(){
 
   btn.disabled = true;
   try{
-    setStatus("Working out likely specs and pinout grid positions...", "status-busy", true);
+    setStatus("Working out likely specs and pinout...", "status-busy", true);
     const sys = `You suggest Fritzing part specs. Respond ONLY with raw JSON (no markdown) with keys:
 title, description, family, package (THT/SMD/etc), tags (array of strings),
-pins (array of {name, type, description, position: {breadboard: {x, y}, schematic: {x, y}, pcb: {x, y}}}) where type is one of male/female/pad, and position contains normalized grid coordinates (x: 0.0 to 1.0, y: 0.0 to 1.0) where you think pins should be located on each view canvas.
+pins (array of {name, type, description}) where type is one of male/female/pad.
 Propose the most typical, realistic pinout for this kind of component.`;
     const raw = stripFence(await callModel(sys, `Name: ${name}\nType: ${type}\nNotes: ${notes}`, key, model), "json");
     let obj;
@@ -928,12 +940,12 @@ Propose the most typical, realistic pinout for this kind of component.`;
     document.getElementById('fzpXml').value = "";
     setStep(2);
     document.getElementById('editPanel').scrollIntoView({behavior:'smooth', block:'start'});
-    setStatus("Review the suggested specs and pin grid locations, edit anything, then Generate Files.", "status-ok");
+    setStatus("Review the suggested specs and pins, edit anything, then Generate Files.", "status-ok");
   }catch(e){ setStatus("Error: "+e.message, "status-err"); }
   finally{ btn.disabled = false; }
 }
 
-/* ---------- Pin table (drag reorder + duplicate) ---------- */
+/* ---------- Pin table (drag reorder + duplicate, keeps positions in sync) ---------- */
 function renderPins(){
   const body = document.getElementById('pinBody');
   body.innerHTML = "";
@@ -1058,7 +1070,7 @@ function rebuildXmlFromFields(){
   setStatus("Rebuilt .fzp from current fields.", "status-ok");
 }
 
-/* ---------- Compose final export SVG ---------- */
+/* ---------- Compose final export SVG (background + positioned pins) ---------- */
 function composeExportSvg(view){
   try{
     const [w,h] = STAGE_DIM[view];
@@ -1071,15 +1083,18 @@ function composeExportSvg(view){
     }
 
     if(view === 'pcb'){
+      // PCB connectors use the connectorNpad convention (not pin), per Fritzing spec.
       const pads = state.pins.map((p,i)=>{
         const pos = (state.pinPos[view] && state.pinPos[view][i]) || {x:.5,y:.5};
         return `<circle id="connector${i}pad" cx="${(pos.x*w).toFixed(1)}" cy="${(pos.y*h).toFixed(1)}" r="4.5" fill="#c9a876" stroke="none"/>`;
       }).join("");
-      const copper = `<g id="copper1"><g id="copper0">${pads}</g></g>`;
+      // copper0 (bottom) encloses copper1 (top), matching the worked example in the spec.
+      const copper = `<g id="copper0"><g id="copper1">${pads}</g></g>`;
       const silk = `<g id="silkscreen">${bgTag}</g>`;
       return `${svgOpen}${copper}${silk}</svg>`;
     }
 
+    // breadboard / schematic: connectorNpin (visible shape) + connectorNterminal (exact snap anchor)
     let leads = "";
     if(view === 'schematic'){
       leads = state.pins.map((p,i)=>{
@@ -1113,21 +1128,13 @@ function renderStage(view){
   const holder = document.getElementById('stageHolder-'+view);
   if(!holder) return;
   holder.innerHTML = "";
-  const globalSnap = document.getElementById('snapGrid') && document.getElementById('snapGrid').checked;
-  const viewSnap = snapState[view] !== false;
-  const snapOn = globalSnap && viewSnap;
-
+  const snapOn = document.getElementById('snapGrid') && document.getElementById('snapGrid').checked;
+  holder.classList.toggle('show-grid', !!snapOn && view !== 'icon');
   if(state.bg[view]){
     const img = document.createElement('img');
     img.src = state.bg[view];
     holder.appendChild(img);
-  }
-  if(snapOn && view !== 'icon'){
-    const grid = document.createElement('div');
-    grid.className = 'stage-grid';
-    holder.appendChild(grid);
-  }
-  if(!state.bg[view]){
+  } else {
     const ph = document.createElement('div');
     ph.className = "placeholder";
     ph.textContent = "No artwork yet — Generate or Upload Image";
@@ -1171,8 +1178,8 @@ function startDrag(view, idx, ev){
   const rect = stage.getBoundingClientRect();
   const dotEl = ev.currentTarget;
   const leadEl = stage.querySelector(`[data-lead="${idx}"]`);
-  const snap = ()=> (document.getElementById('snapGrid') && document.getElementById('snapGrid').checked) && (snapState[view] !== false);
-  const GRID = 0.025; // Smaller 2.5% grid
+  const snap = ()=> document.getElementById('snapGrid').checked;
+  const GRID = 0.05;
   function apply(clientX, clientY){
     let x = (clientX - rect.left) / rect.width;
     let y = (clientY - rect.top) / rect.height;
@@ -1198,12 +1205,50 @@ function startDrag(view, idx, ev){
   document.addEventListener('pointerup', onUp);
 }
 function resetLayout(view){
-  const defaults = autoPositionsForView(view,state.pins.length);
+  const defaults = defaultPositionsForCount(state.pins.length);
   state.pinPos[view] = state.pins.map((p,i)=> defaults[i] || {x:.5,y:.5});
   renderStage(view);
   refreshComposedSvg(view);
-  setStatus(`${view} pins auto-placed in a default layout — drag any that need fine-tuning onto the real artwork.`, "status-ok");
+  setStatus(`${view} pins reset to a default left/right layout — drag any that need fine-tuning, or try 🤖 AI-Detect Pins if you've uploaded a real photo/diagram.`, "status-ok");
 }
+
+/* ---------- AI-vision pin detection: actually looks at the artwork ---------- */
+async function aiAutoPlacePins(view){
+  const key = document.getElementById('apiKey').value.trim();
+  const model = getModel();
+  if(!key){ markFieldError('apiKey', true); setStatus("Enter your OpenRouter API key.", "status-err"); return; }
+  if(!state.bg[view]){ setStatus(`No artwork on the ${view} view yet — generate or upload one first.`, "status-err"); return; }
+  if(model === '__auto_free'){ setStatus("AI-Detect Pins needs a vision-capable model — pick GPT-4o or Claude 3.5 Sonnet from the Model dropdown (free models usually can't see images).", "status-err"); return; }
+
+  setStatus(`Looking at the ${view} artwork to locate pins...`, "status-busy", true);
+  try{
+    const pinList = state.pins.map((p,i)=>`${i}: ${p.name}`).join(", ");
+    const sys = `You are looking at a component diagram/photo for a Fritzing part view ("${view}"). The image is exactly
+${STAGE_DIM[view][0]} x ${STAGE_DIM[view][1]} pixels (that coordinate system, top-left origin). Identify the pixel
+location of each of these named pins/pads as they actually appear in the image: ${pinList}.
+Respond ONLY with raw JSON: an array of {"index": <pin index number above>, "x": <0-1 fraction of image width>, "y": <0-1 fraction of image height>}.
+If a pin genuinely isn't visible/labeled in the image, make your best reasonable estimate based on typical layout for this kind of part rather than omitting it — the array must have exactly ${state.pins.length} entries.`;
+    const raw = await callModelWithImage(sys, `Locate these pins: ${pinList}`, state.bg[view], key, model);
+    const cleaned = stripFence(raw, "json");
+    let arr;
+    try{ arr = JSON.parse(cleaned); }
+    catch(e){ throw new Error("Model didn't return valid JSON. Raw response: " + cleaned.slice(0,200)); }
+
+    const newPos = state.pins.map((p,i)=>{
+      const match = arr.find(a => a.index === i);
+      if(match && typeof match.x === 'number' && typeof match.y === 'number'){
+        return { x: Math.min(1,Math.max(0,match.x)), y: Math.min(1,Math.max(0,match.y)) };
+      }
+      return (state.pinPos[view] && state.pinPos[view][i]) || {x:.5,y:.5};
+    });
+    state.pinPos[view] = newPos;
+    renderStage(view);
+    refreshComposedSvg(view);
+    const foundCount = arr.filter(a => state.pins[a.index]).length;
+    setStatus(`AI placed ${foundCount}/${state.pins.length} pins based on the actual artwork — double-check and drag to correct any misses.`, "status-ok");
+  }catch(e){ setStatus("AI pin detection failed: "+e.message, "status-err"); }
+}
+
 let uploadTargetView = null;
 document.getElementById('bgUpload').addEventListener('change', function(){
   const file = this.files[0];
@@ -1213,7 +1258,7 @@ document.getElementById('bgUpload').addEventListener('change', function(){
   reader.onload = ()=>{
     state.bg[view] = reader.result;
     if(view !== 'icon'){
-      const defaults = autoPositionsForView(view,state.pins.length);
+      const defaults = defaultPositionsForCount(state.pins.length);
       state.pinPos[view] = state.pins.map((p,i)=> defaults[i] || {x:.5,y:.5});
     }
     renderStage(view);
@@ -1229,13 +1274,41 @@ document.getElementById('bgUpload').addEventListener('change', function(){
 function triggerUpload(view){ uploadTargetView = view; document.getElementById('bgUpload').click(); }
 
 /* ---------- AI artwork generation per view ---------- */
+/* ---------- Standard engineering schematic symbol (deterministic, no AI needed) ---------- */
+function buildStandardSchematicBody(title){
+  const [w,h] = STAGE_DIM.schematic;
+  const leadLen = w*0.07;
+  const leftX = w*0.08 + leadLen;
+  const rightX = w*0.92 - leadLen;
+  const bodyW = rightX - leftX;
+  const topY = h*0.10, botY = h*0.90, bodyH = botY - topY;
+  const label = esc(title).slice(0, 24);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+  <rect x="${leftX.toFixed(1)}" y="${topY.toFixed(1)}" width="${bodyW.toFixed(1)}" height="${bodyH.toFixed(1)}"
+    fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+  <text x="${(w/2).toFixed(1)}" y="${(h/2).toFixed(1)}" font-size="13" text-anchor="middle" fill="#000000">${label}</text>
+</svg>`;
+}
+function useStandardSchematicSymbol(){
+  const title = document.getElementById('fTitle').value || "Part";
+  state.bg.schematic = svgTextToDataUri(buildStandardSchematicBody(title));
+  renderStage('schematic');
+  refreshComposedSvg('schematic');
+  refreshCard();
+  setStatus("Standard IEC/ANSI-style schematic body applied — leads already line up with the pins.", "status-ok");
+}
+
 async function generateArtworkForView(view, key, model, editInstruction){
   const title = document.getElementById('fTitle').value;
   let sys;
   if(view === 'icon'){
-    sys = `Generate a small, simple, recognizable icon-style SVG (square, viewBox 0 0 120 120) representing a part called "${title}". Output ONLY raw valid SVG, no markdown, no commentary.`;
+    sys = `Generate a small, simple, recognizable icon-style SVG (square, viewBox 0 0 120 120) representing a part called "${title}", styled like a Fritzing parts-bin icon: flat, clean, minimal detail, no photorealism. Output ONLY raw valid SVG, no markdown, no commentary.`;
+  } else if(view === 'schematic'){
+    sys = `Generate a SCHEMATIC symbol SVG (viewBox 0 0 ${STAGE_DIM.schematic[0]} ${STAGE_DIM.schematic[1]}) for a part called "${title}", following standard IEC/ANSI electrical schematic symbol conventions — the same style used in real EDA tools (KiCad, Eagle, Fritzing core parts). For a module/board/IC-style part, draw ONLY a simple rectangular body outline (thin black stroke, white fill), centered, with the part name as a text label inside it. Do NOT draw pin lines, pin numbers, or connector dots — those are added separately and will attach exactly at the body edges. Do NOT attempt a literal/photorealistic drawing of the physical part. No markdown, no commentary, output ONLY raw SVG.`;
+  } else if(view === 'pcb'){
+    sys = `Generate a PCB silkscreen SVG (viewBox 0 0 ${STAGE_DIM.pcb[0]} ${STAGE_DIM.pcb[1]}) for a part called "${title}", in the style of a real PCB silkscreen layer: a simple board/component outline drawn with thin light-colored lines (e.g. white or pale yellow) on a dark background, plus a small pin-1 indicator mark. Keep it minimal and schematic-like, not photorealistic. Do NOT draw the copper pads themselves — those are added separately. No markdown, no commentary, output ONLY raw SVG.`;
   } else {
-    sys = `Generate a clean, simple ${view} view background SVG (viewBox 0 0 ${STAGE_DIM[view][0]} ${STAGE_DIM[view][1]}) for a part called "${title}". Show the part's outline/body only — do NOT draw connector pins or numbered dots, those are added separately. Output ONLY raw valid SVG, no markdown, no commentary.`;
+    sys = `Generate a BREADBOARD view SVG (viewBox 0 0 ${STAGE_DIM.breadboard[0]} ${STAGE_DIM.breadboard[1]}) for a part called "${title}" that looks like the real physical component as it would appear sitting on a breadboard — realistic proportions, colors, and shape. Do NOT draw connector pins or numbered dots, those are added separately. Output ONLY raw valid SVG, no markdown, no commentary.`;
   }
   let userMsg = `Part: ${title}`;
   if(editInstruction){
@@ -1250,8 +1323,7 @@ async function generateArtworkForView(view, key, model, editInstruction){
   refreshComposedSvg(view);
   refreshCard();
 }
-
-/* ---------- AI Edit ---------- */
+/* ---------- AI Edit (natural-language edits after generation) ---------- */
 async function applyAiEdit(){
   const key = document.getElementById('apiKey').value.trim();
   const model = getModel();
@@ -1277,7 +1349,7 @@ async function applyAiEdit(){
       };
       const sys = `You edit Fritzing part specs based on a user instruction. You are given the CURRENT spec as JSON
 and a requested change. Respond ONLY with the FULL UPDATED JSON object (same shape: title, description, family,
-package, tags array, pins array of {name,type,description, position: {breadboard: {x,y}, schematic: {x,y}, pcb: {x,y}}}). Keep everything not affected by the instruction
+package, tags array, pins array of {name,type,description}). Keep everything not affected by the instruction
 unchanged. Do not drop pins unless explicitly asked to remove them.`;
       const raw = stripFence(await callModel(sys, `Current spec:\n${JSON.stringify(current)}\n\nRequested change: ${instruction}`, key, model), "json");
       let updated;
@@ -1379,16 +1451,19 @@ function renderSvgGrid(){
   for(const view of VIEWS){
     const box = document.createElement('div');
     box.className = "svg-box";
-    const snapChecked = snapState[view] !== false ? 'checked' : '';
     box.innerHTML = `<div class="hd"><h4>${view}</h4><span class="led led-unk" id="badge-${view}">UNTESTED</span></div>
       <div class="stage ${view}" id="stageHolder-${view}" onclick="openZoom('${view}')"></div>
       <div class="actions" style="margin-top:10px">
         <button class="mini secondary" onclick="event.stopPropagation();regenerateView('${view}')">Generate (AI)</button>
         <button class="mini secondary" onclick="event.stopPropagation();triggerUpload('${view}')">Upload Image</button>
-        ${view!=='icon' ? `<button class="mini secondary" onclick="event.stopPropagation();resetLayout('${view}')">↺ Auto-Place Pins</button>
-        <label class="checkline" style="margin:0;font-size:10.5px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;" onclick="event.stopPropagation()">
-          <input type="checkbox" id="snap-${view}" ${snapChecked} onchange="toggleViewSnap('${view}', this.checked)"> Snap to grid
-        </label>` : ""}
+        <button class="mini secondary" onclick="event.stopPropagation();togglePasteSvg('${view}')">⌘ Paste SVG Code</button>
+        ${view==='schematic' ? `<button class="mini secondary" onclick="event.stopPropagation();useStandardSchematicSymbol()">▭ Standard Symbol</button>` : ""}
+        ${view!=='icon' ? `<button class="mini secondary" onclick="event.stopPropagation();resetLayout('${view}')">↺ Default Layout</button>` : ""}
+        ${view!=='icon' ? `<button class="mini secondary" onclick="event.stopPropagation();aiAutoPlacePins('${view}')">🤖 AI-Detect Pins</button>` : ""}
+      </div>
+      <div id="pasteSvgWrap-${view}" style="display:none;margin-top:10px">
+        <textarea id="pasteSvgInput-${view}" rows="5" placeholder="Paste raw <svg>...</svg> markup here"></textarea>
+        <button class="mini secondary" style="margin-top:6px" onclick="event.stopPropagation();applyPastedSvg('${view}')">Use This SVG</button>
       </div>`;
     grid.appendChild(box);
   }
@@ -1451,32 +1526,23 @@ function extractImagePaths(xml){
     pcb: get("pcbView")
   };
 }
-function fzpzSvgName(imagePath){
-  return "svg." + imagePath.replace(/\//g, ".");
-}
-function fzpzPartName(fzpXml){
-  const title = (fzpXml.match(/<title>([\s\S]*?)<\/title>/)||[,"custom_part"])[1];
-  return "part." + sanitizeFilename(title).replace(/\.[^.]+$/, "") + ".fzp";
-}
 async function buildFzpzBlob(fzpXml, svgs, fmt){
   const paths = extractImagePaths(fzpXml);
   const zip = new JSZip();
-  zip.file(fzpzPartName(fzpXml), fzpXml);
-  for(const view of ["icon","breadboard","schematic","pcb"]){
-    const imagePath = paths[view];
-    if(!imagePath) throw new Error("Missing " + view + " image path in FZP metadata.");
-    zip.file(fzpzSvgName(imagePath), svgs[view] || "<svg xmlns=\"http://www.w3.org/2000/svg\"/>");
-  }
+  zip.file("part.fzp", fzpXml);
+  zip.file(paths.icon || "icon/icon.svg", svgs.icon || "<svg></svg>");
+  zip.file(paths.breadboard || "breadboard/breadboard.svg", svgs.breadboard || "<svg></svg>");
+  zip.file(paths.schematic || "schematic/schematic.svg", svgs.schematic || "<svg></svg>");
+  zip.file(paths.pcb || "pcb/pcb.svg", svgs.pcb || "<svg></svg>");
   return zip.generateAsync({type:"blob"});
 }
 async function verifyFzpzBlob(blob, fzpXml){
   const paths = extractImagePaths(fzpXml);
-  const expected = [fzpzPartName(fzpXml), ...Object.values(paths).filter(Boolean).map(fzpzSvgName)];
+  const expected = ["part.fzp", paths.icon, paths.breadboard, paths.schematic, paths.pcb].filter(Boolean);
   const reloaded = await JSZip.loadAsync(blob);
   const actualPaths = Object.keys(reloaded.files).filter(p => !reloaded.files[p].dir);
   const missing = expected.filter(p => !actualPaths.includes(p));
-  const nested = actualPaths.filter(p => p.includes("/"));
-  return { ok: missing.length === 0 && nested.length === 0, missing: missing.concat(nested.length ? ["nested paths: "+nested.join(", ")] : []), actualPaths, expected };
+  return { ok: missing.length === 0, missing, actualPaths, expected };
 }
 async function packageAndDownload(){
   if(!window.JSZip){ setStatus("JSZip failed to load — check network/CDN access.", "status-err"); return; }
@@ -1499,7 +1565,7 @@ async function packageAndDownload(){
   a.href = URL.createObjectURL(blob);
   a.download = sanitizeFilename(document.getElementById('fTitle').value || "custom_part") + "." + fmt;
   a.click();
-  setStatus("Package downloaded and verified — flat part.<name>.fzp + all 4 flat svg.<view>.<name>.svg files confirmed.", "status-ok");
+  setStatus("Package downloaded and verified — part.fzp + all 4 SVGs confirmed present at the correct paths.", "status-ok");
 }
 function downloadIndividual(){
   refreshComposedAll();
@@ -1606,7 +1672,7 @@ function saveProject(){
     fPackage: document.getElementById('fPackage').value, fDesc: document.getElementById('fDesc').value,
     fTags: document.getElementById('fTags').value, pins: state.pins, bg: state.bg, pinPos: state.pinPos,
     svgs: state.svgs, fzpXml: document.getElementById('fzpXml').value, pkgFormat: document.getElementById('pkgFormat').value,
-    editVisible: document.getElementById('editPanel').style.display !== 'none', library, snapState
+    editVisible: document.getElementById('editPanel').style.display !== 'none', library
   };
   const blob = new Blob([JSON.stringify(proj, null, 2)], {type:"application/json"});
   const a = document.createElement('a');
@@ -1635,7 +1701,6 @@ function loadProjectFile(file){
       state.bg = proj.bg || {icon:null,breadboard:null,schematic:null,pcb:null};
       state.pinPos = proj.pinPos || {breadboard:[],schematic:[],pcb:[]};
       state.svgs = proj.svgs || {icon:"",breadboard:"",schematic:"",pcb:""};
-      snapState = proj.snapState || {breadboard: true, schematic: true, pcb: true};
       library = proj.library || [];
       syncPinPositions();
       renderPins();
@@ -1654,7 +1719,7 @@ function loadProjectFile(file){
   reader.readAsText(file);
 }
 
-/* ---------- Import existing .fzp / .fzpz ---------- */
+/* ---------- Import an existing .fzp / .fzpz ---------- */
 function fzpXmlToFields(xml){
   const doc = new DOMParser().parseFromString(xml, "application/xml");
   const t = (tag)=> doc.querySelector(tag)?.textContent.trim() || "";
@@ -1685,44 +1750,87 @@ async function importPartFile(file){
   if(!file) return;
   try{
     setStatus("Reading imported file...", "status-busy", true);
-    if(/\.(fzp|xml)$/i.test(file.name)){
-      const text = await file.text();
-      applyImportedFields(fzpXmlToFields(text));
-      document.getElementById('fzpXml').value = text;
-      state.moduleId = extractModuleId(text);
-      renderSvgGrid();
-      setStatus("Imported .fzp metadata successfully.", "status-ok");
-    } else if(/\.(fzpz|zip)$/i.test(file.name)){
-      if(!window.JSZip) throw new Error("JSZip not loaded");
+    if(/\.(fzpz|zip)$/i.test(file.name)){
+      if(!window.JSZip){ setStatus("JSZip failed to load — check network/CDN access.", "status-err"); return; }
       const zip = await JSZip.loadAsync(file);
-      const fzpName = Object.keys(zip.files).find(n => n.endsWith('.fzp'));
-      if(!fzpName) throw new Error("No .fzp metadata found inside zip bundle.");
-      const fzpXml = await zip.files[fzpName].async("text");
-      applyImportedFields(fzpXmlToFields(fzpXml));
-      document.getElementById('fzpXml').value = fzpXml;
-      state.moduleId = extractModuleId(fzpXml);
-
-      for(const v of VIEWS){
-        const svgFile = Object.keys(zip.files).find(n => n.toLowerCase().includes(v) && n.endsWith('.svg'));
-        if(svgFile){
-          const svgContent = await zip.files[svgFile].async("text");
-          state.bg[v] = svgTextToDataUri(svgContent);
-          state.svgs[v] = svgContent;
-        }
+      let fzpEntry = null;
+      zip.forEach((path, entry)=>{ if(/\.fzp$/i.test(path)) fzpEntry = entry; });
+      if(!fzpEntry) throw new Error("No .fzp found inside the archive.");
+      const xml = await fzpEntry.async("text");
+      applyImportedFields(fzpXmlToFields(xml));
+      state.moduleId = extractModuleId(xml);
+      document.getElementById('fzpXml').value = xml;
+      for(const view of VIEWS){
+        let svgEntry = null;
+        zip.forEach((path, entry)=>{ if(new RegExp(view+'\\.svg$','i').test(path)) svgEntry = entry; });
+        state.bg[view] = svgEntry ? svgTextToDataUri(await svgEntry.async("text")) : null;
       }
       renderSvgGrid();
       refreshComposedAll();
       validateAll();
       setStep(4);
-      setStatus("Imported part bundle successfully with artwork.", "status-ok");
+    } else {
+      const xml = await file.text();
+      applyImportedFields(fzpXmlToFields(xml));
+      state.moduleId = extractModuleId(xml);
+      document.getElementById('fzpXml').value = xml;
+      document.getElementById('svgGrid').innerHTML = '<div class="empty-hint">No embedded artwork found in a plain .fzp — click Generate Files, or Generate/Upload per view once populated.</div>';
+      setStep(2);
     }
-  }catch(e){ setStatus("Import error: "+e.message, "status-err"); }
+    document.getElementById('editPanel').scrollIntoView({behavior:'smooth', block:'start'});
+    setStatus("Imported — review and edit below.", "status-ok");
+  }catch(e){ setStatus("Import failed: "+e.message, "status-err"); }
 }
+
 function confirmReset(){
-  if(confirm("Reset everything and clear current part?")){
-    location.reload();
-  }
+  const hasWork = document.getElementById('editPanel').style.display !== 'none';
+  if(hasWork && !confirm("This clears everything on screen (unsaved). Continue? Tip: use Save Project or Save to Library first if you want to keep it.")) return;
+  resetAll();
 }
+function resetAll(){
+  state = { bg:{icon:null,breadboard:null,schematic:null,pcb:null}, pinPos:{breadboard:[],schematic:[],pcb:[]},
+    pins:[], svgs:{icon:"",breadboard:"",schematic:"",pcb:""} };
+  document.getElementById('editPanel').style.display = 'none';
+  document.getElementById('reqName').value = '';
+  document.getElementById('reqType').value = '';
+  document.getElementById('reqNotes').value = '';
+  clearFieldError('reqName'); clearFieldError('apiKey');
+  setStep(0);
+  setStatus("");
+}
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape') closeZoom();
+  const mod = e.ctrlKey || e.metaKey;
+  if(mod && e.key.toLowerCase() === 's'){ e.preventDefault(); saveProject(); }
+  if(mod && e.key === 'Enter'){ e.preventDefault(); suggestSpecs(); }
+});
+window.addEventListener('error', (e)=>{
+  try{ setStatus("Unexpected error: " + (e.message || "unknown") + (e.filename ? ` (line ${e.lineno})` : ""), "status-err"); }catch(_){}
+});
+window.addEventListener('unhandledrejection', (e)=>{
+  try{ setStatus("Unexpected error: " + (e.reason && e.reason.message ? e.reason.message : e.reason), "status-err"); }catch(_){}
+});
+window.addEventListener('beforeunload', (e)=>{
+  const hasWork = document.getElementById('editPanel').style.display !== 'none';
+  if(hasWork){ e.preventDefault(); e.returnValue = ''; }
+});
+
+/* ---------- Drag-and-drop import zone ---------- */
+(function initDropzone(){
+  const dz = document.getElementById('dropzone');
+  ['dragenter','dragover'].forEach(evt=> dz.addEventListener(evt, (e)=>{ e.preventDefault(); dz.classList.add('dragover'); }));
+  ['dragleave','drop'].forEach(evt=> dz.addEventListener(evt, (e)=>{ e.preventDefault(); dz.classList.remove('dragover'); }));
+  dz.addEventListener('drop', (e)=>{
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(file) importPartFile(file);
+  });
+})();
+
+/* Load saved API key on initial script run too (in case DOMContentLoaded already fired) */
+try{
+  const saved = localStorage.getItem('fritzing_gen_api_key');
+  if(saved) document.getElementById('apiKey').value = saved;
+}catch(e){}
 </script>
 </body>
 </html>
